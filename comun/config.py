@@ -54,7 +54,8 @@ def cargar() -> dict[str, Any]:
     return cfg
 
 
-def ruta(clave: str) -> Path:
-    """Devuelve una ruta de la sección `rutas`, resuelta respecto a la raíz del repo."""
-    p = Path(cargar()["rutas"][clave])
+def ruta(clave: str, cfg: dict[str, Any] | None = None) -> Path:
+    """Devuelve una ruta de la sección `rutas` (de `cfg` o de la configuración cargada), resuelta respecto a
+    la raíz del repo."""
+    p = Path((cfg or cargar())["rutas"][clave])
     return p if p.is_absolute() else RAIZ / p

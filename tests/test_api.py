@@ -82,7 +82,7 @@ def test_rest_y_reanudar_por_websocket(cliente):
 def test_rest_varios(cliente):
     with cliente(OllamaFalso()) as c:
         salud = c.get("/api/salud").json()
-        assert salud["mcp"] is True and salud["ollama"] == "0.30.0-falso" and salud["herramientas"] == 9
+        assert salud["mcp"] is True and salud["ollama"] == "0.30.0-falso" and salud["herramientas"] == 10
         assert salud["fecha_demo"] == "2026-11-20"
         assert [p["id"] for p in c.get("/api/guion").json()][:2] == ["cartera", "fraude"]
         assert c.post("/api/aprobaciones/ap-inexistente", json={"aprobar": True}).status_code == 404
@@ -160,7 +160,7 @@ async def test_host_mcp_por_stdio_con_aprobacion(db, cfg):
     aprobador = Aprobador()
     await host.conectar()
     try:
-        assert len(host.herramientas) == 9
+        assert len(host.herramientas) == 10
         r = await host.llamar("crear_ticket", {"tipo": "servicio", "prioridad": "baja", "titulo": "Prueba stdio",
                                                "detalle": "x"}, {"usuario": "prueba", "modelo": "m"}, 20,
                               solicitante=aprobador)
