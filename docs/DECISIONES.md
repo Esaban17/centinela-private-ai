@@ -47,8 +47,8 @@ Queda justo en el objetivo de ≤ 35 GB, con margen de error. Si al medir se pas
 **Límite de memoria de GPU en macOS (importante en 48 GB):** por defecto macOS deja usar a la GPU
 alrededor del 75 % de la memoria unificada (~36 GB en una Mac de 48 GB). Si los modelos lo superan, Ollama
 reparte capas a la CPU o descarga modelos, y eso es justo el *cold start* que queremos evitar en escena.
-`scripts/setup_mac.sh` (Fase 2) subirá el límite con `sudo sysctl iogpu.wired_limit_mb=40960` (se revierte
-al reiniciar). Este dato es conocido del ecosistema pero no lo verifiqué en su máquina: se confirma midiendo.
+`scripts/setup_mac.sh --limite-gpu` sube el límite con `sudo sysctl iogpu.wired_limit_mb=40960` (memoria total
+menos 8 GB; se revierte al reiniciar). Este dato es conocido del ecosistema pero no lo verifiqué en su máquina: se confirma midiendo.
 
 Variables de Ollama para la demo: `OLLAMA_MAX_LOADED_MODELS=4`, `OLLAMA_KEEP_ALIVE=-1`,
 `OLLAMA_NUM_PARALLEL=1` (una sola petición a la vez, menos caché KV), `OLLAMA_FLASH_ATTENTION=1`,
@@ -124,3 +124,32 @@ Variables de Ollama para la demo: `OLLAMA_MAX_LOADED_MODELS=4`, `OLLAMA_KEEP_ALI
 6. **El modelo agente se elige midiendo** con `make medir` en la Mac (no se pudo en el contenedor Linux, sin GPU
    ni modelos). Criterio: ≥ 90 % de éxito en las preguntas del guion y primer token ≤ 2 s; si `qwen3.6` no llega,
    probar `gemma4:26b-a4b-it-qat` antes de alargar el prompt.
+
+## 6. Endurecimiento y ensayo (Fase 6)
+
+1. **Guardia de salida además del monitor.** El monitor (psutil) *observa*; la guardia *impide*. Un audit hook de
+   Python (PEP 578) en el orquestador, el servidor MCP y los scripts rechaza `socket.connect`/`sendto` a direcciones
+   que no sean loopback y `getaddrinfo`/`gethostbyname` de nombres que no sean `localhost` (resolver un nombre ya es
+   una consulta DNS que sale). Falla con `PermissionError`, que las librerías tratan como un error de red normal,
+   y queda en el log. No cubre a Ollama (es Go): para él están `OLLAMA_HOST=127.0.0.1`, `make ollama` y el monitor.
+2. **Un solo camino para warmup, ensayo, medir y check-offline** (`scripts/guion.py`): el orquestador real, el
+   servidor MCP real por stdio y una copia de la base. Lo que se ensaya es exactamente lo que sube al escenario.
+3. **El warmup carga los modelos por el mismo cliente que la demo.** Si el `num_ctx` de la petición cambiara,
+   Ollama recargaría el modelo en escena; por eso no se usa `ollama run` ni otro cliente. Además corre el guion una
+   vez: con `OLLAMA_NUM_PARALLEL=1`, el prefijo del prompt (sistema + herramientas) queda en la caché del modelo.
+4. **La voz se precalienta dentro del orquestador.** Whisper y Kokoro viven en su proceso, así que un warmup en otro
+   proceso no le serviría. La API los carga al arrancar (en segundo plano) y `make warmup` se lo vuelve a pedir con
+   `POST /api/precalentar`. Si Kokoro no carga y no hay respaldo, el warmup lo dice (antes informaba «ok»).
+5. **El acto de visión entra al guion** (`documento_id: demo-boleta_deposito_discrepancia.png`): los atajos de la UI
+   pasan a ser 6 y el ensayo mide también la visión. Cada paso puede exigir `respuesta_contiene` (p. ej. «titular»).
+6. **El ensayo revisa la auditoría y la red en cada corrida**, no solo el tool calling: cuenta que cada llamada esté
+   en `auditoria` con el modelo que la pidió y muestrea el monitor de conexiones cada segundo.
+7. **El primer audio se mide desde que el orquestador recibe la pregunta** (`--voz` entra por voz con la pregunta
+   dicha por Kokoro). En el navegador se suma la subida del audio, local y de milisegundos.
+8. **`make ollama` rechaza la app de la barra y `brew services`**: ambos levantan Ollama sin las variables de la
+   demo, y la app busca actualizaciones por internet.
+9. **`make check-offline` sin red es la prueba de verdad.** Con red solo es parcial (lo dice); `ESTRICTO=1` exige el
+   Wi-Fi apagado. Sin Ollama ni modelos, `--sin-prueba` hace solo las revisiones estáticas.
+10. **Medido en el contenedor (Linux, sin GPU), con un Ollama simulado por HTTP:** warmup, ensayo y check-offline
+    completan los 6 actos con 0 conexiones salientes. Las latencias reales, la memoria y el primer audio se miden en
+    la Mac (GUION.md §6).

@@ -13,6 +13,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Query
 
+from comun import salida
+
 from .monitor import MonitorSoberania
 
 
@@ -32,9 +34,10 @@ def crear_router(cfg: dict, monitor: MonitorSoberania | None = None) -> APIRoute
 
     @router.post("/reiniciar")
     def reiniciar() -> dict:
-        """Borra el historial de conexiones vistas (antes de empezar el ensayo o la demo)."""
+        """Borra el historial de conexiones vistas y de intentos bloqueados (botón «Nueva sesión» de la UI)."""
         monitor.max_salientes = 0
         monitor.historial_salientes = []
+        salida.limpiar()
         return {"ok": True}
 
     router.monitor = monitor  # type: ignore[attr-defined]  (acceso en pruebas)

@@ -10,6 +10,8 @@ import time
 
 import psutil
 
+from comun import salida
+
 from . import conexiones, costos, ollama, red
 
 PROCESOS_POR_DEFECTO = ["ollama"]
@@ -46,6 +48,9 @@ class MonitorSoberania:
                 **con.a_dict(),
                 "max_sesion": self.max_salientes,
                 "historial": self.historial_salientes,
+                # Intentos que la guardia de salida frenó dentro del proceso (no llegaron a salir).
+                "bloqueadas": salida.bloqueos(),
+                "guardia_activa": salida.activa(),
             },
             "red": red.estado_red(),
             "ollama": ollama.modelos_cargados(self.url_ollama),

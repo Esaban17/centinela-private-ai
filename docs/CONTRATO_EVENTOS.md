@@ -138,8 +138,9 @@ Por REST:
 | `GET /api/audio/{id}` | — | `audio/wav` |
 | `GET /api/sesiones/{id}/historial` | — | mensajes de la conversación (sin el prompt de sistema) |
 | `GET /api/auditoria?limite=20` | — | últimas filas de `auditoria` (parámetros ya enmascarados por el servidor MCP) |
-| `GET /api/salud` | — | `{ollama, mcp, voz, vision, modelos}` |
-| `GET /api/guion` | — | preguntas del guion para los botones de atajo |
+| `GET /api/salud` | — | `{ollama, mcp, voz, vision, modelos, fecha_demo, precalentado}` (`precalentado`: estado de la carga de STT y TTS) |
+| `POST /api/precalentar` | — | `200 {"stt": "ok · mlx · 900 ms", "tts": "…"}`: vuelve a cargar Whisper y Kokoro en el orquestador (`make warmup`, Fase 6) |
+| `GET /api/guion` | — | preguntas del guion para los botones de atajo (`id`, `pregunta`, `documento_id` opcional en el acto de visión) |
 
 Un turno con documento: la UI sube la imagen (`POST /api/documentos`) o elige una de la lista, y luego envía un
 `mensaje` con `documento_id` (el texto puede ir vacío; se usa «Valide este documento contra la base»).

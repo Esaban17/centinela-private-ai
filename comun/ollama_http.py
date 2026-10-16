@@ -38,6 +38,26 @@ class ClienteOllama:
             raise ErrorOllama(f"Ollama respondió {r.status_code} en {ruta}: {r.text[:300]}")
         return r.json()
 
+    def _get(self, ruta: str, timeout: float = 5.0) -> dict[str, Any]:
+        try:
+            r = self._http.get(ruta, timeout=timeout)
+        except httpx.HTTPError as e:
+            raise ErrorOllama(f"No se pudo contactar a Ollama en {self.url}: {e}") from e
+        if r.status_code != 200:
+            raise ErrorOllama(f"Ollama respondió {r.status_code} en {ruta}: {r.text[:300]}")
+        return r.json()
+
+    def version(self) -> str:
+        return str(self._get("/api/version").get("version", "?"))
+
+    def etiquetas(self) -> list[str]:
+        """Modelos descargados (GET /api/tags)."""
+        return [m.get("name") or m.get("model") for m in self._get("/api/tags").get("models", [])]
+
+    def cargados(self) -> dict[str, Any]:
+        """Modelos en memoria (GET /api/ps), tal como los devuelve Ollama."""
+        return self._get("/api/ps")
+
     def embeddings(self, modelo: str, textos: list[str], timeout: float | None = None) -> list[list[float]]:
         """Vectores de `textos` con el modelo de embeddings (POST /api/embed)."""
         if not textos:

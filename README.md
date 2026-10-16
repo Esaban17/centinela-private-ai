@@ -7,7 +7,48 @@ Demo 100 % local: modelos abiertos en Ollama, un servidor MCP propio sobre SQLit
 voz y un panel de soberanía que demuestra cero conexiones a internet.
 
 Las decisiones de modelos, el presupuesto de memoria y los ajustes a la arquitectura están en
-[docs/DECISIONES.md](docs/DECISIONES.md).
+[docs/DECISIONES.md](docs/DECISIONES.md). El guion del escenario, el plan B y el video de respaldo, en
+[GUION.md](GUION.md).
+
+## Instalación desde cero (Mac Apple Silicon, 48 GB o más)
+
+Requiere internet **una sola vez** (Homebrew, Python, ~35 GB de modelos). Después todo corre sin red.
+
+```bash
+git clone https://github.com/Esaban17/centinela-private-ai.git && cd centinela-private-ai
+./scripts/setup_mac.sh               # uv, ollama y ffmpeg con Homebrew; .venv; modelos de Ollama y de voz;
+                                     # base, índice de políticas y documentos demo; pruebas
+./scripts/setup_mac.sh --limite-gpu  # opcional: sube el límite de memoria de GPU de macOS (pide sudo, dura
+                                     # hasta reiniciar). Úselo si `make warmup` dice que un modelo corre en CPU.
+```
+
+Solo se necesita [Homebrew](https://brew.sh) instalado antes. En Linux (desarrollo y pruebas, sin MLX):
+`make setup && make seed ingest documentos test`.
+
+## La demo en cuatro comandos
+
+```bash
+make demo                    # terminal 1: Ollama (si no corre), orquestador y UI en http://127.0.0.1:8765
+make warmup                  # terminal 2: modelos cargados sin vencimiento, guion una vez, voz precalentada
+make check-offline ESTRICTO=1  # con el Wi-Fi apagado: el guion completo y 0 conexiones salientes
+make logs                    # terminal secundaria: qué está pasando por dentro
+```
+
+| Comando | Qué hace |
+|---|---|
+| `make demo` | Prepara lo que falte (base, índice, documentos), levanta `ollama serve` en segundo plano si no responde, abre la UI y deja el orquestador en primer plano. Whisper y Kokoro se cargan al arrancar. |
+| `make warmup` | Revisa archivos y modelos (ninguno `:cloud`), carga los 4 modelos de Ollama con `keep_alive=-1` y las mismas opciones que la demo, corre el guion una vez sobre una copia de la base, precalienta la voz en el orquestador y verifica con `ollama ps` que todo siga en memoria, en GPU y dentro de 35 GB. `SIN_GUION=1` lo acorta. |
+| `make ensayo` | Corre el guion 10 veces (`CORRIDAS=n`) y revisa los criterios de aceptación: ≥ 90 % de éxito por pregunta, p50/p95, 0 conexiones salientes y auditoría completa. `VOZ=1` entra por voz (TTS → STT) y mide el primer audio. Reporte en `salida/ensayos/`. |
+| `make check-offline` | Config solo en loopback, variables offline, UI sin assets externos, Ollama como servicio y escuchando solo en 127.0.0.1, red del equipo y el guion completo con el monitor y la guardia de salida encendidos. `ESTRICTO=1` exige el Wi-Fi apagado. |
+| `make ollama` | `ollama serve` con las variables de `config.yaml → ollama.servidor` (127.0.0.1, 4 modelos a la vez, sin vencimiento, caché KV q8_0). |
+| `make reset` | Base y documentos demo como nuevos (borra los tickets de los ensayos). Con `make demo` apagado. |
+| `make medir` | Compara modelos agente con el mismo ensayo (`MODELOS="a b" CORRIDAS=5`). |
+
+**Guardia de salida.** Además del monitor del panel, el orquestador, el servidor MCP y los scripts instalan un
+*audit hook* de Python que **bloquea** cualquier conexión o resolución DNS fuera del equipo
+([comun/salida.py](comun/salida.py)). Si una librería lo intentara, falla al instante y queda en el log como
+«CONEXIÓN SALIENTE BLOQUEADA» (y en `/api/soberania/conexiones → bloqueadas`). Se desactiva con
+`soberania.bloquear_salida: false`.
 
 ## Estado por fases
 
@@ -18,9 +59,11 @@ Las decisiones de modelos, el presupuesto de memoria y los ajustes a la arquitec
 | 3. RAG + visión | ✅ 7 políticas ficticias, ingesta con búsqueda híbrida (sqlite-vec + FTS5), 4 documentos demo, extracción con visión validada con Pydantic y `validar_documento` |
 | 4. Voz | ✅ STT (mlx-whisper / faster-whisper), TTS Kokoro por oraciones con respaldo `say`, ganchos en `orchestrator/voz.py` ([docs/VOZ.md](docs/VOZ.md)) |
 | 5. UI + panel de soberanía | ✅ UI local en `web/`, monitor real de conexiones y simulador (`make ui-sim`); ver [docs/UI.md](docs/UI.md) |
-| 6. Endurecimiento y ensayo | pendiente |
+| 6. Endurecimiento y ensayo | ✅ `make demo`, `make warmup`, `make ensayo`, `make check-offline`, guardia de salida, instalación desde cero y [GUION.md](GUION.md) |
 
 ## Requisitos (Mac Apple Silicon)
+
+`./scripts/setup_mac.sh` instala lo necesario. A mano:
 
 ```bash
 brew install uv ollama ffmpeg node   # node solo para MCP Inspector durante el desarrollo
@@ -76,8 +119,8 @@ Cualquier cliente que lance servidores por stdio sirve. Ejemplo de configuració
 ## Orquestador — Fase 2
 
 ```bash
-ollama serve                 # en otra terminal (como servicio, no la app de la barra de menú)
-make run                     # API en http://127.0.0.1:8765 · /api/docs · /api/salud
+make ollama                  # en otra terminal (ollama serve con las variables de config.yaml, no la app de la barra)
+make run                     # API en http://127.0.0.1:8765 · /api/docs · /api/salud (make demo hace ambas cosas)
 make cli                     # o conversar en la terminal, sin UI
 make medir MODELOS="qwen3.6:35b-a3b-q4_K_M gemma4:26b-a4b-it-qat" CORRIDAS=5
 ```
@@ -94,7 +137,7 @@ make medir MODELOS="qwen3.6:35b-a3b-q4_K_M gemma4:26b-a4b-it-qat" CORRIDAS=5
 - **Logs** en la terminal con las cuentas enmascaradas (`AT-•••42-01`). `CENTINELA_LOG=INFO` muestra cada paso.
 - **Memoria por sesión** (últimos `orquestador.memoria_mensajes` mensajes) y **timeouts por etapa** con mensaje
   amable: un turno siempre termina con `turno.fin`, aunque falle Ollama o el servidor MCP.
-- `make medir` corre las preguntas del guion (`config.yaml → guion`) contra cada modelo sobre una copia de la
+- `make medir` corre el ensayo del guion (`config.yaml → guion`) contra cada modelo sobre una copia de la
   base y reporta éxito de tool calling y latencias p50/p95. Sirve para elegir el agente en la Mac.
 
 ## Fase 3: RAG de políticas y visión documental
@@ -174,14 +217,16 @@ fijos en el código.
 
 ```
 centinela/
+├── GUION.md        # guion del escenario, plan B y video de respaldo
 ├── config.yaml / .env.example / Makefile / pyproject.toml
-├── comun/          # configuración y enmascarado compartidos
-├── scripts/        # seed.py, ingest.py, gen_documentos.py, pull_models.sh
+├── comun/          # configuración, enmascarado y guardia de salida compartidos
+├── scripts/        # setup_mac.sh, demo.sh, ollama_serve.sh, warmup.py, ensayo.py, check_offline.py,
+│                   # seed.py, ingest.py, gen_documentos.py, pull_models.sh
 ├── mcp_server/     # servidor MCP banco-atitlan (incluye la búsqueda RAG)
 ├── documentos/     # esquemas Pydantic, extracción con visión y validación cruzada
 ├── orchestrator/   # FastAPI, host MCP, agente, cliente de Ollama, ganchos (vision.py de la Fase 3)
 ├── web/            # UI de una página con assets locales
 ├── data/           # banco.db (generada), politicas/, documentos_demo/, vectores/
-├── docs/           # DECISIONES.md, CONTRATO_EVENTOS.md
+├── docs/           # DECISIONES.md, CONTRATO_EVENTOS.md, UI.md, VOZ.md
 └── tests/
 ```

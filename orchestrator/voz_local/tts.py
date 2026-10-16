@@ -194,6 +194,8 @@ class TTSConRespaldo:
                 self.principal.precalentar()
                 return
             except Exception as e:
+                if self.respaldo is None:  # sin respaldo no hay voz: que el warmup lo diga, no que finja «ok»
+                    raise
                 self.degradar(f"No se pudo precalentar: {e}")
         if self.respaldo is not None:
             self.respaldo.precalentar()

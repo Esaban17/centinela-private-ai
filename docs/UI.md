@@ -34,7 +34,7 @@ app.include_router(crear_router(cfg))
 | Ruta | Uso |
 |---|---|
 | `GET /api/soberania?tokens_entrada=&tokens_salida=` | Instantánea completa del panel. La UI manda los tokens de `sesion.acumulado` para calcular el costo. |
-| `GET /api/soberania/conexiones` | Solo el monitor de conexiones (para `make check-offline` en la Fase 6). |
+| `GET /api/soberania/conexiones` | Solo el monitor de conexiones (lo usa `make check-offline`). Incluye `guardia_activa` y `bloqueadas`: intentos de salida que la guardia de salida frenó dentro del orquestador (Fase 6). |
 | `POST /api/soberania/reiniciar` | Borra el historial de conexiones vistas antes de empezar. |
 
 - **Conexiones salientes:** `psutil` revisa, PID por PID, las conexiones inet del orquestador, de todos sus
