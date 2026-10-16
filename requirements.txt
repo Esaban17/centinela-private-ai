@@ -1,8 +1,11 @@
-# Fase 1 (datos + MCP). Las fases siguientes agregan fastapi, ollama, psutil, sqlite-vec.
+# Fases 1, 3 y 4 (datos, MCP, RAG, visión, voz). Las demás fases agregan fastapi, psutil.
 mcp>=2.3,<3
 pydantic>=2.8
 pyyaml>=6
 sqlglot>=30
+httpx>=0.27
+sqlite-vec>=0.1.6
+pillow>=11
 pytest>=8
 pytest-asyncio>=1.0
 # Fase 4 (voz). mlx-whisper solo en Mac Apple Silicon; faster-whisper es la alternativa para Linux y pruebas.
