@@ -26,9 +26,15 @@ seed:
 ollama:
   url: "http://127.0.0.1:11434"
   keep_alive: -1                 # nunca descargar modelos durante la demo
-  # Variables recomendadas para `ollama serve` (las aplica scripts/ollama_env.sh en Fase 2):
-  #   OLLAMA_MAX_LOADED_MODELS=4  OLLAMA_NUM_PARALLEL=1  OLLAMA_KEEP_ALIVE=-1
-  #   OLLAMA_FLASH_ATTENTION=1    OLLAMA_KV_CACHE_TYPE=q8_0
+  presupuesto_gb: 35             # `make warmup` avisa si los modelos cargados en Ollama pasan de aquí
+  # `make ollama` (scripts/ollama_serve.sh) levanta `ollama serve` con estas variables:
+  servidor:
+    OLLAMA_HOST: "127.0.0.1:11434"   # solo este equipo, nunca la red
+    OLLAMA_MAX_LOADED_MODELS: 4      # agente + rápido + visión + embeddings, todos a la vez
+    OLLAMA_NUM_PARALLEL: 1           # una petición a la vez por modelo: menos caché KV
+    OLLAMA_KEEP_ALIVE: "-1"          # ningún modelo se descarga solo
+    OLLAMA_FLASH_ATTENTION: 1
+    OLLAMA_KV_CACHE_TYPE: "q8_0"     # caché KV a la mitad (requiere flash attention)
 
 # Perfil 48 GB (por defecto). Etiquetas verificadas en ollama.com el 2026-10-16.
 modelos:
@@ -97,6 +103,8 @@ orquestador:
   puerto: 8765
   usuario: ""                    # vacío = CENTINELA_USUARIO del .env (aparece en la auditoría)
   max_iteraciones: 6             # vueltas del loop agente → herramientas → agente
+  precalentar_al_arrancar: true  # carga Whisper y Kokoro al levantar la API (sin bloquearla)
+  log_archivo: "salida/centinela.log"   # copia del log para `make logs` en la terminal secundaria ("" = no)
   memoria_mensajes: 40           # mensajes de la conversación que se envían al modelo
   max_caracteres_resultado: 6000 # resultado de herramienta que ve el modelo (la UI recibe el completo)
   timeouts_s:                    # por etapa; al vencer se muestra un mensaje amable
@@ -114,8 +122,8 @@ orquestador:
     titulo_ticket_rapido: true   # el modelo rápido titula los tickets antes de pedir aprobación
     resumen_hablado: true        # el modelo rápido resume la respuesta para la voz (si voz.modo_habla = resumen)
 
-# Preguntas del guion: botones de atajo en la UI y base de scripts/medir_agente.py.
-# Se corren en orden en una misma sesión (las preguntas 2-4 dependen de la 1).
+# Preguntas del guion: botones de atajo en la UI (teclas 1-6) y base de warmup, ensayo y medir (scripts/guion.py).
+# Se corren en orden en una misma sesión (las preguntas 2-4 dependen de la 1). Ver GUION.md.
 guion:
   - id: cartera
     pregunta: "Centinela, ¿cómo está la cartera de la clienta Lucía Fernanda Cojtí Barrios?"
@@ -129,9 +137,21 @@ guion:
   - id: politica
     pregunta: "¿Qué dice nuestra política sobre bloqueo preventivo de tarjetas en este caso?"
     herramientas_esperadas: [buscar_politicas]
+  - id: documento                # acto 4: la boleta con el titular cambiado (make documentos)
+    pregunta: "Valide esta boleta de depósito contra la base del banco."
+    documento_id: "demo-boleta_deposito_discrepancia.png"
+    herramientas_esperadas: [validar_documento]
+    respuesta_contiene: ["titular"]
   - id: noc
     pregunta: "¿Hay alertas críticas en la infraestructura?"
     herramientas_esperadas: [alertas_infraestructura]
+    respuesta_contiene: ["VKS", "NSX"]
+
+# `make ensayo`: criterios de aceptación del prompt (§11). El reporte queda en salida/ensayos/.
+ensayo:
+  corridas: 10
+  exito_minimo: 0.9              # ≥ 90 % de éxito por pregunta del guion
+  primer_audio_max_ms: 5000      # primera palabra hablada ≤ 5 s después de soltar el botón (con --voz)
 
 rag:
   max_caracteres_fragmento: 1500   # secciones más largas se parten por párrafos
@@ -173,6 +193,9 @@ costos:
 soberania:
   # Procesos vigilados además del orquestador y sus hijos (el servidor MCP). Coincidencia por nombre.
   procesos: ["ollama"]
+  # Guardia de salida: los procesos Python de la demo bloquean cualquier conexión fuera del equipo
+  # (comun/salida.py). El monitor observa; la guardia impide.
+  bloquear_salida: true
 
 ui:
   host: "127.0.0.1"

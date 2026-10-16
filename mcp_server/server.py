@@ -26,7 +26,7 @@ from mcp.server.mcpserver import AcceptedElicitation, Context, Elicit, Elicitati
 from mcp_types import ToolAnnotations
 from pydantic import BaseModel, Field
 
-from comun import config
+from comun import config, salida
 from comun.mascaras import enmascarar
 from documentos import validacion
 from documentos.modelos import TipoDocumento
@@ -470,6 +470,7 @@ def crear_servidor(db: Path | None = None, cfg: dict[str, Any] | None = None, ol
 def main() -> None:
     logging.basicConfig(level=os.environ.get("CENTINELA_LOG", "INFO"), stream=sys.stderr,
                         format="%(asctime)s %(name)s %(levelname)s %(message)s")
+    salida.instalar(config.cargar())
     crear_servidor().run("stdio")
 
 

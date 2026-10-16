@@ -7,6 +7,7 @@ import logging
 import os
 import re
 import sqlite3
+import time
 import uuid
 from collections import OrderedDict
 from pathlib import Path
@@ -113,6 +114,7 @@ class Orquestador:
         self.audios = Audios()
         self.agente = Agente(self)
         self.fecha_demo = self._leer_fecha_demo()
+        self.precalentado: dict[str, str] = {}
 
     def _leer_fecha_demo(self) -> str | None:
         """El «ahora» de la demo que guardó el seed (tabla meta), para que el agente entienda «este mes»."""
@@ -194,7 +196,28 @@ class Orquestador:
                 "voz": {"stt": disponible(self.ganchos.transcriptor), "tts": disponible(self.ganchos.sintetizador)},
                 "vision": disponible(self.ganchos.vision),
                 "modelos": {rol: m.get("nombre") for rol, m in self.cfg["modelos"].items()},
-                "fecha_demo": self.fecha_demo}
+                "fecha_demo": self.fecha_demo, "precalentado": self.precalentado}
+
+    async def precalentar(self, timeout_s: float = 180) -> dict[str, str]:
+        """Carga Whisper y Kokoro en ESTE proceso y hace una inferencia corta con cada uno, para que el primer
+        turno de voz en escena no pague la carga. Lo llaman el arranque de la API y `make warmup`."""
+        estado: dict[str, str] = {}
+        for nombre, gancho in (("stt", self.ganchos.transcriptor), ("tts", self.ganchos.sintetizador)):
+            if not disponible(gancho) or not hasattr(gancho, "precalentar"):
+                estado[nombre] = "no disponible"
+            else:
+                t = time.perf_counter()
+                try:
+                    await asyncio.wait_for(gancho.precalentar(), timeout_s)
+                    motor = getattr(gancho, "motor", None)
+                    ms = int((time.perf_counter() - t) * 1000)
+                    estado[nombre] = f"ok · {motor} · {ms} ms" if motor else f"ok · {ms} ms"
+                except Exception as e:  # informa; un componente roto no tumba la API
+                    estado[nombre] = f"error: {type(e).__name__}: {e}"
+                    log.warning("precalentado de %s falló: %s", nombre, e)
+            self.precalentado = {**self.precalentado, nombre: estado[nombre]}
+        log.info("precalentado de voz: %s", estado)
+        return estado
 
     async def cerrar(self) -> None:
         for s in self.sesiones.values():

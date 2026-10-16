@@ -23,6 +23,8 @@ export class Panel {
     this.acumulado({ turnos: 0, tokens_entrada: 0, tokens_salida: 0, herramientas_ejecutadas: 0, documentos_analizados: 0, modelos_usados: [] });
     for (const id of ['k-ttft', 'k-tps', 'k-tin', 'k-tout']) $(id).textContent = '–';
     $('etapas').replaceChildren();
+    // Antes de subir al escenario: el historial de conexiones y de intentos bloqueados también vuelve a cero.
+    fetch('/api/soberania/reiniciar', { method: 'POST' }).catch(() => {});
   }
 
   async _sondear() {
@@ -52,6 +54,10 @@ export class Panel {
     $('salientes-detalle').textContent = `psutil sobre ${c.procesos.length} procesos (${vigilados}) · ${c.loopback} locales${historico}`;
     $('salientes-lista').replaceChildren(...c.detalle.slice(0, 6).map((x) => el('li', {}, `${x.proceso} → ${x.remoto} (${x.protocolo})`)));
     if (c.sin_permiso?.length) $('salientes-detalle').textContent += ` · sin permiso: ${c.sin_permiso.map((p) => p.proceso).join(', ')}`;
+    // Guardia de salida: intentos que se frenaron dentro del orquestador antes de salir (no cuentan como salientes).
+    const bloqueadas = c.bloqueadas || [];
+    if (c.guardia_activa) $('salientes-detalle').textContent += ` · guardia de salida activa${bloqueadas.length ? ` (${bloqueadas.length} intentos bloqueados)` : ''}`;
+    $('salientes-lista').append(...bloqueadas.slice(-3).map((b) => el('li', {}, `bloqueado → ${b.destino}`)));
     pill('estado-salientes', ok ? 'ok' : 'alerta', `Conexiones externas: ${c.salientes}`);
 
     // Red del equipo

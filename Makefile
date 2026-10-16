@@ -3,9 +3,20 @@ PY      ?= .venv/bin/python
 OFFLINE := HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 HF_HUB_DISABLE_TELEMETRY=1 ANONYMIZED_TELEMETRY=False DO_NOT_TRACK=1
 INSPECTOR_VERSION ?= 2.11.0
 
-.PHONY: help setup seed ingest documentos vision mcp inspector test pull-models ui-sim voz-modelos voces voz-prueba run cli medir warmup ensayo check-offline
+.PHONY: help setup setup-mac seed ingest documentos vision mcp inspector test pull-models ui-sim voz-modelos voces voz-prueba \
+        ollama demo run cli logs warmup ensayo medir check-offline reset
 
 help:
+	@echo "── El día de la demo (ver GUION.md) ──"
+	@echo "make demo         Levanta todo: Ollama si hace falta, el orquestador y la UI (http://127.0.0.1:8765)"
+	@echo "make warmup       Carga los modelos sin vencimiento, corre el guion una vez y precalienta la voz"
+	@echo "make check-offline  Sin red y 0 conexiones salientes (ESTRICTO=1 exige el Wi-Fi apagado)"
+	@echo "make ensayo       Corre el guion N veces y revisa los criterios (CORRIDAS=10 VOZ=1)"
+	@echo "make logs         Sigue el log del orquestador (terminal secundaria)"
+	@echo "make reset        Base y documentos demo como nuevos (borra los tickets de los ensayos)"
+	@echo "make ollama       ollama serve con las variables de config.yaml (solo 127.0.0.1, sin vencimiento)"
+	@echo "── Instalación y desarrollo ──"
+	@echo "make setup-mac    Instalación desde cero en una Mac (requiere internet una vez; LIMITE_GPU=1 sube el límite de GPU)"
 	@echo "make setup        Crea .venv (Python 3.12) e instala dependencias"
 	@echo "make seed         Genera data/banco.db (determinista)"
 	@echo "make ingest       Indexa data/politicas/ (embeddings locales + sqlite-vec + FTS5)"
@@ -20,7 +31,7 @@ help:
 	@echo "make voz-prueba   TTS → STT de una frase del guion y latencia del primer audio en streaming"
 	@echo "make run          Levanta el orquestador en http://127.0.0.1:8765 (arranca el servidor MCP solo)"
 	@echo "make cli          Conversa con Centinela en la terminal (aprobaciones con s/n)"
-	@echo "make medir        Mide el modelo agente con el guion (MODELOS=\"a b\" CORRIDAS=5)"
+	@echo "make medir        Compara modelos agente con el guion (MODELOS=\"a b\" CORRIDAS=5)"
 	@echo "make ui-sim       UI + Panel de Soberanía contra el simulador de eventos (sin modelos; requiere seed)"
 
 setup:
@@ -73,5 +84,25 @@ cli:
 medir:
 	$(OFFLINE) $(PY) -m scripts.medir_agente --corridas $(or $(CORRIDAS),3) $(if $(MODELOS),--modelos $(MODELOS),)
 
-warmup ensayo check-offline:
-	@echo "«$@» llega en las fases 5-6 (ver README)."
+setup-mac:
+	./scripts/setup_mac.sh $(if $(LIMITE_GPU),--limite-gpu,)
+
+ollama:
+	PY=$(PY) ./scripts/ollama_serve.sh
+
+demo:
+	PY=$(PY) ./scripts/demo.sh
+
+logs:
+	@mkdir -p salida && touch salida/centinela.log && tail -n 50 -F salida/centinela.log
+
+warmup:
+	$(OFFLINE) $(PY) -m scripts.warmup $(if $(SIN_GUION),--sin-guion,)
+
+ensayo:
+	$(OFFLINE) $(PY) -m scripts.ensayo $(if $(CORRIDAS),--corridas $(CORRIDAS),) $(if $(VOZ),--voz,)
+
+check-offline:
+	$(OFFLINE) $(PY) -m scripts.check_offline $(if $(ESTRICTO),--estricto,)
+
+reset: seed documentos

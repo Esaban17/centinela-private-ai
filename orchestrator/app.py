@@ -57,7 +57,13 @@ def crear_app(orq: Orquestador | None = None) -> FastAPI:
             await o.host.conectar()
         except MCPNoDisponible as e:  # la API arranca igual; /api/salud lo muestra y se reintenta en el turno
             log.error("%s", e)
+        # Whisper y Kokoro viven en este proceso: se cargan al arrancar, sin bloquear la API.
+        precalentado = None
+        if o.cfg.get("orquestador", {}).get("precalentar_al_arrancar", True):
+            precalentado = asyncio.create_task(o.precalentar(), name="precalentar-voz")
         yield
+        if precalentado is not None and not precalentado.done():
+            precalentado.cancel()
         await o.cerrar()
 
     app = FastAPI(title="Centinela — orquestador (DEMO / DATOS FICTICIOS)", lifespan=ciclo,
@@ -238,6 +244,11 @@ def crear_app(orq: Orquestador | None = None) -> FastAPI:
     @app.get("/api/salud")
     async def salud(request: Request):
         return await o(request).salud()
+
+    @app.post("/api/precalentar")
+    async def precalentar(request: Request):
+        """Vuelve a cargar STT y TTS en el orquestador (lo llama `make warmup`)."""
+        return await o(request).precalentar()
 
     @app.get("/api/guion")
     async def guion(request: Request):
