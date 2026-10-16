@@ -168,3 +168,22 @@ async def test_host_mcp_por_stdio_con_aprobacion(db, cfg):
         await host.cerrar()
     assert r.ok and r.datos["creado"] is True
     assert "Centinela quiere crear este ticket" in aprobador.mensajes[0]
+
+
+def test_panel_de_soberania_se_monta_si_existe(cliente, monkeypatch):
+    """Con el módulo de la Fase 5 presente, sus rutas quedan bajo /api/soberania; sin él, la API arranca igual."""
+    import sys
+    import types
+
+    from fastapi import APIRouter
+
+    def crear_router(cfg):
+        r = APIRouter(prefix="/api/soberania")
+        r.get("")(lambda: {"conexiones_salientes": 0})
+        return r
+
+    with cliente(OllamaFalso()) as c:
+        assert c.get("/api/soberania").status_code == 404
+    monkeypatch.setitem(sys.modules, "orchestrator.soberania", types.SimpleNamespace(crear_router=crear_router))
+    with cliente(OllamaFalso()) as c:
+        assert c.get("/api/soberania").json() == {"conexiones_salientes": 0}

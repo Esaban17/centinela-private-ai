@@ -243,6 +243,17 @@ def crear_app(orq: Orquestador | None = None) -> FastAPI:
     async def guion(request: Request):
         return o(request).cfg.get("guion", [])
 
+    # ───────────── Panel de soberanía (Fase 5) ─────────────
+
+    try:
+        from orchestrator.soberania import crear_router
+    except ModuleNotFoundError as e:
+        if e.name != "orchestrator.soberania":
+            raise
+        log.info("panel de soberanía: módulo aún no integrado")
+    else:
+        app.include_router(crear_router(orq.cfg if orq is not None else config.cargar()))
+
     # ───────────── UI (Fase 5) ─────────────
 
     web = config.RAIZ / "web"
