@@ -10,3 +10,4 @@ data/vectores/*
 modelos/
 *.log
 .DS_Store
+salida/

@@ -16,7 +16,7 @@ Las decisiones de modelos, el presupuesto de memoria y los ajustes a la arquitec
 | 1. Datos + MCP | ✅ seed determinista, servidor `banco-atitlan` con 9 herramientas, 2 recursos, 2 prompts y pruebas |
 | 2. Agente en texto | pendiente |
 | 3. RAG + visión | pendiente (`buscar_politicas` responde "índice no construido" sin inventar) |
-| 4. Voz | pendiente |
+| 4. Voz | ✅ STT (mlx-whisper / faster-whisper), TTS Kokoro por oraciones con respaldo `say`, ganchos en `orchestrator/voz.py` ([docs/VOZ.md](docs/VOZ.md)) |
 | 5. UI + panel de soberanía | pendiente |
 | 6. Endurecimiento y ensayo | pendiente |
 
@@ -90,6 +90,16 @@ Cualquier cliente que lance servidores por stdio sirve. Ejemplo de configuració
 Toda llamada queda en la tabla `auditoria` (usuario, herramienta, parámetros con cuentas enmascaradas,
 resumen, modelo y estado `ok` / `error` / `rechazado`). El orquestador envía `usuario` y `modelo` en el
 `_meta` de cada llamada.
+
+## Voz (Fase 4)
+
+```bash
+make voz-modelos   # una vez, con internet: Kokoro + whisper-large-v3-turbo (MLX) en ./modelos
+make voces         # muestras de cada voz en salida/voces/index.html para elegir
+make voz-prueba    # TTS → STT de una frase del guion y tiempo al primer audio
+```
+
+Detalle, cómo lo engancha el orquestador y qué probar en la Mac: [docs/VOZ.md](docs/VOZ.md).
 
 ## Configuración
 

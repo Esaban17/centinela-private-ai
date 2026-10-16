@@ -1,7 +1,13 @@
-# Fase 1 (datos + MCP). Las fases siguientes agregan fastapi, ollama, psutil, sqlite-vec, mlx-whisper, kokoro-onnx.
+# Fase 1 (datos + MCP). Las fases siguientes agregan fastapi, ollama, psutil, sqlite-vec.
 mcp>=2.3,<3
 pydantic>=2.8
 pyyaml>=6
 sqlglot>=30
 pytest>=8
 pytest-asyncio>=1.0
+# Fase 4 (voz). mlx-whisper solo en Mac Apple Silicon; faster-whisper es la alternativa para Linux y pruebas.
+numpy>=1.26
+kokoro-onnx>=0.5,<1
+mlx-whisper>=0.4; sys_platform == "darwin" and platform_machine == "arm64"
+faster-whisper>=1.1; sys_platform != "darwin" or platform_machine != "arm64"
+huggingface_hub>=0.24
