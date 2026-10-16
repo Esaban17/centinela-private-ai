@@ -1,4 +1,4 @@
-# Fases 1 a 4 (datos, MCP, RAG, visión, orquestador, voz). La Fase 5 agrega psutil.
+# Todas las fases (datos, MCP, RAG, visión, orquestador, voz, UI).
 mcp>=2.3,<3
 pydantic>=2.8
 pyyaml>=6
@@ -12,6 +12,9 @@ pytest-asyncio>=1.0
 fastapi>=0.115
 uvicorn>=0.30
 python-multipart>=0.0.9
+# Fase 5 (UI y Panel de Soberanía)
+websockets>=13
+psutil>=6
 # Fase 4 (voz). mlx-whisper solo en Mac Apple Silicon; faster-whisper es la alternativa para Linux y pruebas.
 numpy>=1.26
 kokoro-onnx>=0.5,<1

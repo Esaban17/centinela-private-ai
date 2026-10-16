@@ -17,7 +17,7 @@ Las decisiones de modelos, el presupuesto de memoria y los ajustes a la arquitec
 | 2. Agente en texto | ✅ orquestador FastAPI (host MCP por stdio), loop del agente, enrutamiento multi-modelo, aprobación humana, eventos por WebSocket/SSE ([contrato](docs/CONTRATO_EVENTOS.md)) |
 | 3. RAG + visión | ✅ 7 políticas ficticias, ingesta con búsqueda híbrida (sqlite-vec + FTS5), 4 documentos demo, extracción con visión validada con Pydantic y `validar_documento` |
 | 4. Voz | ✅ STT (mlx-whisper / faster-whisper), TTS Kokoro por oraciones con respaldo `say`, ganchos en `orchestrator/voz.py` ([docs/VOZ.md](docs/VOZ.md)) |
-| 5. UI + panel de soberanía | pendiente |
+| 5. UI + panel de soberanía | ✅ UI local en `web/`, monitor real de conexiones y simulador (`make ui-sim`); ver [docs/UI.md](docs/UI.md) |
 | 6. Endurecimiento y ensayo | pendiente |
 
 ## Requisitos (Mac Apple Silicon)
@@ -156,6 +156,14 @@ make voz-prueba    # TTS → STT de una frase del guion y tiempo al primer audio
 
 Detalle, cómo lo engancha el orquestador y qué probar en la Mac: [docs/VOZ.md](docs/VOZ.md).
 
+## UI y Panel de Soberanía
+
+```bash
+make seed && make ui-sim   # UI contra el simulador de eventos: http://127.0.0.1:8766
+```
+
+Herramientas MCP y panel reales; modelos simulados. Detalle en [docs/UI.md](docs/UI.md).
+
 ## Configuración
 
 `config.yaml` define modelos, rutas, límites y reglas de anomalías. Cualquier clave se sobreescribe por
@@ -172,7 +180,7 @@ centinela/
 ├── mcp_server/     # servidor MCP banco-atitlan (incluye la búsqueda RAG)
 ├── documentos/     # esquemas Pydantic, extracción con visión y validación cruzada
 ├── orchestrator/   # FastAPI, host MCP, agente, cliente de Ollama, ganchos (vision.py de la Fase 3)
-├── web/            # Fase 5
+├── web/            # UI de una página con assets locales
 ├── data/           # banco.db (generada), politicas/, documentos_demo/, vectores/
 ├── docs/           # DECISIONES.md, CONTRATO_EVENTOS.md
 └── tests/

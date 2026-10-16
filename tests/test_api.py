@@ -86,7 +86,8 @@ def test_rest_varios(cliente):
         assert salud["fecha_demo"] == "2026-11-20"
         assert [p["id"] for p in c.get("/api/guion").json()][:2] == ["cartera", "fraude"]
         assert c.post("/api/aprobaciones/ap-inexistente", json={"aprobar": True}).status_code == 404
-        assert c.post("/api/sesiones/../mensajes", json={"texto": "x"}).status_code in (400, 404)
+        # 405 cuando web/ está montada en "/": la ruta normalizada cae en los archivos estáticos.
+        assert c.post("/api/sesiones/../mensajes", json={"texto": "x"}).status_code in (400, 404, 405)
         assert c.post("/api/sesiones/s 1/mensajes", json={"texto": "x"}).status_code == 400
 
         doc = c.post("/api/documentos", files={"archivo": ("boleta.png", b"\x89PNG", "image/png")}).json()
@@ -182,8 +183,10 @@ def test_panel_de_soberania_se_monta_si_existe(cliente, monkeypatch):
         r.get("")(lambda: {"conexiones_salientes": 0})
         return r
 
+    # Sin el módulo (None en sys.modules hace que el import falle con ModuleNotFoundError).
+    monkeypatch.setitem(sys.modules, "orchestrator.soberania", None)
     with cliente(OllamaFalso()) as c:
-        assert c.get("/api/soberania").status_code == 404
+        assert c.get("/api/soberania").status_code in (404, 405)
     monkeypatch.setitem(sys.modules, "orchestrator.soberania", types.SimpleNamespace(crear_router=crear_router))
     with cliente(OllamaFalso()) as c:
         assert c.get("/api/soberania").json() == {"conexiones_salientes": 0}

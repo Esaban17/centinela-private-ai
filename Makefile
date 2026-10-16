@@ -3,7 +3,7 @@ PY      ?= .venv/bin/python
 OFFLINE := HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 HF_HUB_DISABLE_TELEMETRY=1 ANONYMIZED_TELEMETRY=False DO_NOT_TRACK=1
 INSPECTOR_VERSION ?= 2.11.0
 
-.PHONY: help setup seed ingest documentos vision mcp inspector test pull-models voz-modelos voces voz-prueba run cli medir warmup ensayo check-offline
+.PHONY: help setup seed ingest documentos vision mcp inspector test pull-models ui-sim voz-modelos voces voz-prueba run cli medir warmup ensayo check-offline
 
 help:
 	@echo "make setup        Crea .venv (Python 3.12) e instala dependencias"
@@ -21,6 +21,7 @@ help:
 	@echo "make run          Levanta el orquestador en http://127.0.0.1:8765 (arranca el servidor MCP solo)"
 	@echo "make cli          Conversa con Centinela en la terminal (aprobaciones con s/n)"
 	@echo "make medir        Mide el modelo agente con el guion (MODELOS=\"a b\" CORRIDAS=5)"
+	@echo "make ui-sim       UI + Panel de Soberanía contra el simulador de eventos (sin modelos; requiere seed)"
 
 setup:
 	uv venv --python 3.12 .venv
@@ -49,6 +50,9 @@ test:
 
 pull-models:
 	./scripts/pull_models.sh
+
+ui-sim:
+	$(OFFLINE) $(PY) -m scripts.simulador_ui
 
 voz-modelos:
 	$(PY) -m scripts.descargar_modelos_voz $(if $(FASTER),--faster,)

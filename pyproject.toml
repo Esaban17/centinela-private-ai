@@ -14,10 +14,12 @@ dependencies = [
     "python-multipart>=0.0.9",
     "sqlite-vec>=0.1.6",
     "pillow>=11",
+    "websockets>=13",
+    "psutil>=6",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-asyncio>=1.0"]
+dev = ["pytest>=8", "pytest-asyncio>=1.0", "httpx>=0.27"]
 voz = [
     "numpy>=1.26",
     "kokoro-onnx>=0.5,<1",
