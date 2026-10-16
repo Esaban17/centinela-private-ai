@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+data/banco.db
+data/banco.db-*
+data/vectores/*
+!data/vectores/.gitkeep
+modelos/
+*.log
+.DS_Store

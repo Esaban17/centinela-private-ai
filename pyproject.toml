@@ -1,0 +1,19 @@
+[project]
+name = "centinela"
+version = "0.1.0"
+description = "Centinela — asistente de operaciones con IA privada 100 % local (DEMO / DATOS FICTICIOS)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "mcp>=2.3,<3",
+    "pydantic>=2.8",
+    "pyyaml>=6",
+    "sqlglot>=30",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=1.0"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
