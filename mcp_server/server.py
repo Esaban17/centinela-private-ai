@@ -28,6 +28,8 @@ from pydantic import BaseModel, Field
 
 from comun import config
 from comun.mascaras import enmascarar
+from documentos import validacion
+from documentos.modelos import TipoDocumento
 from mcp_server import anomalias, rag, sql_seguro
 from mcp_server.db import (
     con_limite_de_tiempo,
@@ -53,7 +55,9 @@ TipoMovimiento = Literal["deposito", "retiro", "compra", "transferencia_enviada"
 INSTRUCCIONES = """Servidor del Banco Atitlán (banco FICTICIO, datos de demostración).
 Expone clientes, cuentas, transacciones, tickets, alertas del NOC y políticas internas.
 Use buscar_cliente antes de resumen_cliente si solo conoce el nombre. Las herramientas
-crear_ticket y actualizar_ticket requieren aprobación humana. Si un dato no existe, dígalo;
+crear_ticket y actualizar_ticket requieren aprobación humana. Para documentos escaneados, pase los
+campos que extrajo el modelo de visión a validar_documento. Cite documento y sección de las políticas
+que use (buscar_politicas). Si un dato no existe, dígalo;
 no lo invente. Las fechas usan la zona America/Guatemala."""
 
 
@@ -159,7 +163,8 @@ def _decision(resultado: ElicitationResult[Aprobacion]) -> tuple[bool, str]:
     return False, f"rechazado por la persona ({resultado.action})"
 
 
-def crear_servidor(db: Path | None = None, cfg: dict[str, Any] | None = None) -> MCPServer:
+def crear_servidor(db: Path | None = None, cfg: dict[str, Any] | None = None, ollama: Any | None = None) -> MCPServer:
+    """`ollama`: cliente para los embeddings de buscar_politicas (las pruebas inyectan uno simulado)."""
     cfg = cfg or config.cargar()
     banco = Banco(db or config.ruta("db"), cfg)
     an = cfg.get("anomalias", {})
@@ -306,9 +311,25 @@ def crear_servidor(db: Path | None = None, cfg: dict[str, Any] | None = None) ->
         """Busca en las políticas y manuales internos del banco (RAG local). Devuelve fragmentos con el
         documento y la sección de origen para citarlos."""
         async with banco.registro(ctx, "buscar_politicas", {"consulta": consulta, "k": k}) as reg:
-            res = rag.buscar(cfg, consulta, max(1, min(int(k), 8)))
-            reg["resumen"] = f"{len(res.get('fragmentos', []))} fragmentos"
+            res = rag.buscar(cfg, consulta, max(1, min(int(k), 8)), ollama)
+            reg["resumen"] = f"{len(res.get('fragmentos', []))} fragmentos ({res.get('modo') or 'sin índice'})"
             return res
+
+    @mcp.tool(annotations=LECTURA)
+    async def validar_documento(tipo_documento: TipoDocumento, campos: dict[str, Any], ctx: Context) -> dict[str, Any]:
+        """Valida contra la base los campos de un documento escaneado (los extrae antes el modelo de visión):
+        ¿existe la cuenta?, ¿coincide el titular?, ¿el monto cuadra con un movimiento?, ¿el saldo declarado es
+        real? Tipos: boleta_deposito, solicitud_credito, factura. Devuelve cada verificación con su motivo y las
+        discrepancias encontradas."""
+        async with banco.registro(ctx, "validar_documento", {"tipo_documento": tipo_documento,
+                                                             "campos": campos}) as reg:
+            try:
+                res = validacion.validar(banco.lectura, tipo_documento, campos)
+            except ValueError as e:
+                reg["estado"], reg["resumen"] = "rechazado", f"campos inválidos: {str(e)[:200]}"
+                return {"ok": False, "mensaje": f"Los campos no son válidos para {tipo_documento}: {e}"}
+            reg["resumen"] = f"{res['documento']}: {res['veredicto']} ({res['discrepancias']} discrepancias)"
+            return {"ok": True, **res}
 
     @mcp.tool(annotations=LECTURA)
     async def alertas_infraestructura(ctx: Context, severidad: Severidad | None = None,
@@ -429,6 +450,13 @@ def crear_servidor(db: Path | None = None, cfg: dict[str, Any] | None = None) ->
         return (f"Busque al cliente «{nombre_cliente}», revise sus anomalías de los últimos 30 días, explique "
                 "cada motivo y, si corresponde, proponga un ticket de fraude citando la política de bloqueo "
                 "preventivo de tarjetas.")
+
+    @mcp.prompt(title="Validación de documento")
+    def validar_documento_escaneado(tipo_documento: str) -> str:
+        """Guía para validar un documento escaneado contra la base."""
+        return (f"Con los campos extraídos de la {tipo_documento}, llame a validar_documento, explique cada "
+                "discrepancia en lenguaje sencillo y, si hay discrepancia de titular, cite el manual de validación "
+                "documental y proponga el siguiente paso.")
 
     @mcp.prompt(title="Revisión del NOC")
     def revision_noc() -> str:

@@ -1,7 +1,10 @@
-# Fase 1 (datos + MCP). Las fases siguientes agregan fastapi, ollama, psutil, sqlite-vec, mlx-whisper, kokoro-onnx.
+# Fases 1 y 3 (datos, MCP, RAG, visión). Las demás fases agregan fastapi, psutil, mlx-whisper, kokoro-onnx.
 mcp>=2.3,<3
 pydantic>=2.8
 pyyaml>=6
 sqlglot>=30
+httpx>=0.27
+sqlite-vec>=0.1.6
+pillow>=11
 pytest>=8
 pytest-asyncio>=1.0
