@@ -166,4 +166,4 @@ Grábelo con la configuración final, en la misma laptop y **con el Wi-Fi apagad
 
 | Fecha | Modelo agente | `make ensayo` (éxito) | p50 / p95 por turno | Primer audio p50 | Memoria `ollama ps` | Notas |
 |---|---|---|---|---|---|---|
-| | qwen3.6:35b-a3b-q4_K_M | | | | | |
+| 2026-10-16 | qwen3.6:35b-a3b-q4_K_M | 58/60 (97 %): fraude 9/10, ticket 9/10, resto 10/10 · `make medir` 18/18 | p50 5.8–9.2 s (documento 16.3 s) / p95 6.4–11.9 s (documento 27.5 s) · 1.er token p50 0.6–6.6 s (documento 11.6 s) · 56 tok/s | — (sin Whisper). Solo TTS: 186 ms en streaming | 25.0 GB: agente 21.4 + rápido 3.0 + embeddings 0.6; visión no quedó cargada | M5 Pro 48 GB. Ollama de la app de la barra de menú, sin las variables de `make ollama`: visión se descarga y la app hizo 3 conexiones salientes (ollama.com y GitHub, búsqueda de actualizaciones). Repetir con `make ollama`. Whisper no bajó: el proxy Zscaler bloquea huggingface.co. Falta `VOZ=1` y `check-offline ESTRICTO=1` |
