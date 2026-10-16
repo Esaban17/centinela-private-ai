@@ -64,6 +64,70 @@ mcp:
   # Las herramientas de escritura piden confirmación humana al cliente MCP (elicitation).
   # Si el cliente no soporta elicitation, la escritura se rechaza.
   escritura_requiere_confirmacion: true
+  # Cómo arranca el orquestador al servidor (proceso hijo por stdio). Vacío = este Python, `-m mcp_server`.
+  comando: ""
+  args: []
+
+orquestador:
+  host: "127.0.0.1"              # solo local; nunca 0.0.0.0 en la demo
+  puerto: 8765
+  usuario: ""                    # vacío = CENTINELA_USUARIO del .env (aparece en la auditoría)
+  max_iteraciones: 6             # vueltas del loop agente → herramientas → agente
+  memoria_mensajes: 40           # mensajes de la conversación que se envían al modelo
+  max_caracteres_resultado: 6000 # resultado de herramienta que ve el modelo (la UI recibe el completo)
+  timeouts_s:                    # por etapa; al vencer se muestra un mensaje amable
+    llm: 90
+    herramienta: 20
+    aprobacion: 120              # tiempo para Aprobar/Rechazar; al vencer se rechaza
+    intencion: 8
+    resumen: 12
+    vision: 60
+    stt: 30
+    tts: 15                      # por oración
+    voz_total: 60                # toda la voz de un turno
+  enrutamiento:                  # «varios modelos, cada uno para su tarea» (chips en la UI)
+    clasificar_intencion: true   # modelo rápido, en paralelo con el agente (no suma latencia)
+    titulo_ticket_rapido: true   # el modelo rápido titula los tickets antes de pedir aprobación
+    resumen_hablado: true        # el modelo rápido resume la respuesta para la voz (si voz.modo_habla = resumen)
+
+# Preguntas del guion: botones de atajo en la UI y base de scripts/medir_agente.py.
+# Se corren en orden en una misma sesión (las preguntas 2-4 dependen de la 1).
+guion:
+  - id: cartera
+    pregunta: "Centinela, ¿cómo está la cartera de la clienta Lucía Fernanda Cojtí Barrios?"
+    herramientas_esperadas: [buscar_cliente, resumen_cliente]
+  - id: fraude
+    pregunta: "¿Ve movimientos raros en sus cuentas este mes?"
+    herramientas_esperadas: [detectar_anomalias]
+  - id: ticket
+    pregunta: "Abra un ticket para el equipo de fraude con esos hallazgos."
+    herramientas_esperadas: [crear_ticket]
+  - id: politica
+    pregunta: "¿Qué dice nuestra política sobre bloqueo preventivo de tarjetas en este caso?"
+    herramientas_esperadas: [buscar_politicas]
+  - id: noc
+    pregunta: "¿Hay alertas críticas en la infraestructura?"
+    herramientas_esperadas: [alertas_infraestructura]
+
+rag:
+  max_caracteres_fragmento: 1500   # secciones más largas se parten por párrafos
+  candidatos: 12                   # fragmentos por canal (vectorial y léxico) antes de fusionar
+  rrf_k: 60                        # constante de Reciprocal Rank Fusion
+  lote_embeddings: 16
+  timeout_embeddings_s: 10         # si vence, la búsqueda sigue solo léxica
+
+vision:
+  max_lado_px: 1600                # se reduce la imagen antes de enviarla al modelo
+  clasificar: true                 # el modelo de visión decide el tipo de documento
+  timeout_s: 90
+  # Fuentes para dibujar los documentos demo (la primera que exista). Deben tener tildes y ñ.
+  fuentes:
+    - "/System/Library/Fonts/Supplemental/Arial.ttf"
+    - "/Library/Fonts/Arial Unicode.ttf"
+    - "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+  fuentes_negrita:
+    - "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
+    - "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
 anomalias:
   dias_base: 120                 # historia previa usada como línea base

@@ -31,8 +31,11 @@ def db(db_plantilla, tmp_path) -> Path:
 
 
 @pytest.fixture
-def cfg() -> dict:
-    return copy.deepcopy(config.cargar())
+def cfg(tmp_path) -> dict:
+    c = copy.deepcopy(config.cargar())
+    # Índice de políticas aislado por prueba (no se usa el de data/vectores del repo).
+    c["rutas"]["vectores"] = str(tmp_path / "vectores" / "politicas.db")
+    return c
 
 
 @pytest.fixture
@@ -40,3 +43,11 @@ def servidor(db, cfg):
     from mcp_server.server import crear_servidor
 
     return crear_servidor(db, cfg)
+
+
+@pytest.fixture
+def ollama_falso():
+    """Ollama simulado (embeddings deterministas por palabras y chat programable)."""
+    from tests.ollama_falso import OllamaFalso
+
+    return OllamaFalso()
