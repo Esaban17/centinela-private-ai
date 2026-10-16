@@ -12,3 +12,4 @@ modelos/
 .DS_Store
 data/documentos_demo/*
 !data/documentos_demo/.gitkeep
+salida/

@@ -45,17 +45,41 @@ modelos:
   embeddings:
     nombre: "bge-m3"                      # multilingüe, ~1.2 GB, 1024 dims
   stt:
-    nombre: "mlx-community/whisper-large-v3-turbo"
-    idioma: "es"
+    motor: "auto"                         # auto (mlx en Apple Silicon, si no faster) | mlx | faster
+    nombre: "mlx-community/whisper-large-v3-turbo"   # motor mlx (la demo)
+    nombre_faster: "large-v3-turbo"       # motor faster-whisper (Linux / pruebas; «small» o «base» para ir rápido)
+    idioma: "es"                          # forzado: Whisper no detecta idioma
+    # Vocabulario que Whisper debe reconocer (nombres propios y siglas del guion).
+    prompt_inicial: "Centinela, Banco Atitlán. Lucía Fernanda Cojtí Barrios, KYC, NOC, VKS, NSX, vCenter, ESXi, quetzales."
   tts:
     motor: "kokoro"                       # kokoro | say
-    voz_kokoro: "em_alex"                 # voces es: ef_dora, em_alex, em_santa
+    respaldo: "say"                       # say | ninguno. Automático si Kokoro falla o tarda más de voz.timeout_tts_s
+    voz_kokoro: "em_alex"                 # voces es: ef_dora, em_alex, em_santa (timbre de España; ver scripts/comparar_voces.py)
+    idioma_kokoro: "es-419"               # fonemizador latinoamericano (seseo). «es» = España
+    velocidad_kokoro: 1.0
+    archivo_kokoro: "kokoro/kokoro-v1.0.onnx"   # relativo a rutas.modelos_voz. Más liviano: kokoro/kokoro-v1.0.int8.onnx
+    archivo_voces: "kokoro/voices-v1.0.bin"
     voz_say: "Paulina"                    # respaldo macOS (es-MX)
+    velocidad_say: 185                    # palabras por minuto
 
 # Alternativas probadas en el mismo presupuesto (cambiar aquí, no en el código):
 #   agente plan B:  gemma4:26b-a4b-it-qat (~16 GB)  |  qwen3:30b-a3b-instruct-2507-q4_K_M (~19 GB)
 #   rapido:         gemma4:e2b-it-qat (~4.3 GB)     |  qwen3.5:2b (~2.7 GB)
 #   embeddings:     qwen3-embedding:0.6b            |  nomic-embed-text-v2-moe
+
+voz:
+  ffmpeg: "ffmpeg"               # decodifica el audio del navegador (brew install ffmpeg)
+  max_segundos_audio: 30         # lo que exceda se recorta
+  umbral_silencio_rms: 0.003     # por debajo = silencio → no se transcribe (evita «Gracias por ver el video»)
+  timeout_stt_s: 15
+  timeout_tts_s: 8               # por oración; si se pasa, las siguientes van con el respaldo
+  # Qué se habla: «primeras_oraciones» habla mientras el LLM escribe (primera palabra antes);
+  # «resumen» espera la respuesta completa y habla resumen_hablado (más corto, pero empieza después).
+  modo_habla: "primeras_oraciones"
+  max_oraciones_habladas: 3      # tope en modo primeras_oraciones (0 = sin tope)
+  max_palabras_resumen: 45
+  min_caracteres_oracion: 8      # oraciones más cortas se juntan con la siguiente
+  max_caracteres_oracion: 220    # si no hay punto, se corta en una coma
 
 mcp:
   servidor: "banco-atitlan"

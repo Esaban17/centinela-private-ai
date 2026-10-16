@@ -16,7 +16,7 @@ Las decisiones de modelos, el presupuesto de memoria y los ajustes a la arquitec
 | 1. Datos + MCP | ✅ seed determinista, servidor `banco-atitlan` con 9 herramientas, 2 recursos, 2 prompts y pruebas |
 | 2. Agente en texto | ✅ orquestador FastAPI (host MCP por stdio), loop del agente, enrutamiento multi-modelo, aprobación humana, eventos por WebSocket/SSE ([contrato](docs/CONTRATO_EVENTOS.md)) |
 | 3. RAG + visión | ✅ 7 políticas ficticias, ingesta con búsqueda híbrida (sqlite-vec + FTS5), 4 documentos demo, extracción con visión validada con Pydantic y `validar_documento` |
-| 4. Voz | pendiente |
+| 4. Voz | ✅ STT (mlx-whisper / faster-whisper), TTS Kokoro por oraciones con respaldo `say`, ganchos en `orchestrator/voz.py` ([docs/VOZ.md](docs/VOZ.md)) |
 | 5. UI + panel de soberanía | ✅ UI local en `web/`, monitor real de conexiones y simulador (`make ui-sim`); ver [docs/UI.md](docs/UI.md) |
 | 6. Endurecimiento y ensayo | pendiente |
 
@@ -145,6 +145,16 @@ MCP `validar_documento` con esos campos.
 Toda llamada queda en la tabla `auditoria` (usuario, herramienta, parámetros con cuentas enmascaradas,
 resumen, modelo y estado `ok` / `error` / `rechazado`). El orquestador envía `usuario` y `modelo` en el
 `_meta` de cada llamada.
+
+## Voz (Fase 4)
+
+```bash
+make voz-modelos   # una vez, con internet: Kokoro + whisper-large-v3-turbo (MLX) en ./modelos
+make voces         # muestras de cada voz en salida/voces/index.html para elegir
+make voz-prueba    # TTS → STT de una frase del guion y tiempo al primer audio
+```
+
+Detalle, cómo lo engancha el orquestador y qué probar en la Mac: [docs/VOZ.md](docs/VOZ.md).
 
 ## UI y Panel de Soberanía
 
