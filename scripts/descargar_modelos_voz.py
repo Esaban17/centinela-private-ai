@@ -71,11 +71,11 @@ def main() -> None:
     ap.add_argument("--sin-mlx", action="store_true", help="no descargar Whisper MLX")
     args = ap.parse_args()
 
-    # Este script es el único que tiene permiso de usar la red.
+    # Este script es el único que tiene permiso de usar la red. Va después de config.cargar(),
+    # que vuelve a poner HF_HUB_OFFLINE=1 desde .env.
+    op = desde_config(config.cargar())
     for var in ("HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE"):
         os.environ.pop(var, None)
-
-    op = desde_config(config.cargar())
     kokoro(op.ruta_kokoro.parent, args.int8)
     if es_apple_silicon() and not args.sin_mlx:
         whisper_mlx(op.dir_modelos, op.modelo_mlx)
