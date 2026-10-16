@@ -1,6 +1,6 @@
 """Simulador del orquestador para desarrollar y ensayar la UI sin modelos.
 
-Habla el contrato de eventos v1 (docs/CONTRATO_EVENTOS.md) en las mismas rutas que el
+Habla el contrato de eventos v1, rev. 1.1 (docs/CONTRATO_EVENTOS.md) en las mismas rutas que el
 orquestador real, así que `web/` funciona igual contra uno u otro.
 
 Qué es real y qué es simulado:
@@ -514,6 +514,8 @@ async def ws(websocket: WebSocket, sid: str, desde_seq: int | None = None):
                 resolver(msg.get("aprobacion_id"), bool(msg.get("aprobar")), msg.get("comentario") or "")
             elif tipo == "cancelar" and s.turno and not s.turno.done():
                 s.turno.cancel()
+            elif tipo == "preferencias":
+                pass  # el simulador no sintetiza voz
             elif tipo == "ping":
                 await websocket.send_json({"v": 1, "seq": 0, "tipo": "pong", "sesion_id": sid, "turno_id": None,
                                            "ts": datetime.now(UTC).isoformat(), "datos": {}})
@@ -554,6 +556,11 @@ async def audio(sid: str, audio: UploadFile = File(...)):
                                           "duracion_ms": 420, "idioma": "es", "bytes_audio": len(datos)})
     iniciar(s, "voz", texto, None, tid)
     return {"turno_id": tid}
+
+
+@app.post("/api/sesiones/{sid}/preferencias")
+async def preferencias(sid: str, cuerpo: dict):
+    return {"ok": True}
 
 
 @app.post("/api/aprobaciones/{aid}")

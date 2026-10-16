@@ -68,6 +68,7 @@ function conectar() {
       const n = $('estado-ws');
       n.dataset.estado = { conectado: 'ok', conectando: 'aviso', desconectado: 'alerta' }[estado];
       n.textContent = { conectado: 'Orquestador local ✓', conectando: 'Conectando…', desconectado: 'Reconectando…' }[estado];
+      if (estado === 'conectado' && silenciado) enviarPreferencias();
     },
   });
   conexion.conectar();
@@ -101,7 +102,11 @@ $('btn-cancelar').addEventListener('click', () => conexion.enviar({ tipo: 'cance
 let guion = [];
 async function cargarGuion() {
   try {
-    guion = (await pedir('/api/guion')).map((g, i) => (typeof g === 'string' ? { texto: g, titulo: `Pregunta ${i + 1}` } : g));
+    // Acepta cadenas, {texto, titulo} (simulador) o {id, pregunta} (guion de config.yaml del orquestador).
+    const titulo = (id) => (id ? id.charAt(0).toUpperCase() + id.slice(1).replaceAll('_', ' ') : null);
+    guion = (await pedir('/api/guion')).map((g, i) => (typeof g === 'string'
+      ? { texto: g, titulo: `Pregunta ${i + 1}` }
+      : { ...g, texto: g.texto || g.pregunta, titulo: g.titulo || titulo(g.id) || `Pregunta ${i + 1}` }));
   } catch {
     guion = [];
   }
@@ -157,8 +162,19 @@ new PushToTalk({
 }).enlazar();
 
 const btnSilencio = $('btn-silencio');
+let silenciado = false;
+/** Silenciar corta lo que suena y le pide al orquestador que no sintetice (mensaje `preferencias`, contrato 1.1). */
+function enviarPreferencias() {
+  if (!conexion.enviar({ tipo: 'preferencias', hablar: !silenciado })) {
+    pedir(`/api/sesiones/${encodeURIComponent(sesionId)}/preferencias`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hablar: !silenciado }),
+    }).catch(() => { /* se reintenta al reconectar */ });
+  }
+}
 function aplicarSilencio(on) {
+  silenciado = on;
   reproductor.silenciar(on);
+  if (conexion) enviarPreferencias();
   btnSilencio.setAttribute('aria-pressed', String(on));
   btnSilencio.textContent = on ? '🔇 Voz' : '🔊 Voz';
   almacenar('centinela.silencio', on ? '1' : null);
