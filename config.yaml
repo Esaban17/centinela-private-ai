@@ -75,7 +75,17 @@ anomalias:
 
 costos:
   # Precios de referencia por millón de tokens. Los fija Estuardo; vacíos por defecto.
+  # El panel los muestra como «estimación referencial» frente a «Costo marginal local: Q0.00».
   moneda: "USD"
   tipo_cambio_gtq: 7.7
   precio_entrada_millon: null
   precio_salida_millon: null
+  referencia: ""                 # texto opcional junto al costo, p. ej. "modelo frontier de referencia"
+
+soberania:
+  # Procesos vigilados además del orquestador y sus hijos (el servidor MCP). Coincidencia por nombre.
+  procesos: ["ollama"]
+
+ui:
+  host: "127.0.0.1"
+  puerto_simulador: 8766         # `make ui-sim`: la UI contra el simulador de eventos (sin modelos)

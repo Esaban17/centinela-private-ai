@@ -17,7 +17,7 @@ Las decisiones de modelos, el presupuesto de memoria y los ajustes a la arquitec
 | 2. Agente en texto | pendiente |
 | 3. RAG + visión | pendiente (`buscar_politicas` responde "índice no construido" sin inventar) |
 | 4. Voz | pendiente |
-| 5. UI + panel de soberanía | pendiente |
+| 5. UI + panel de soberanía | ✅ UI local en `web/`, monitor real de conexiones y simulador (`make ui-sim`); ver [docs/UI.md](docs/UI.md) |
 | 6. Endurecimiento y ensayo | pendiente |
 
 ## Requisitos (Mac Apple Silicon)
@@ -91,6 +91,14 @@ Toda llamada queda en la tabla `auditoria` (usuario, herramienta, parámetros co
 resumen, modelo y estado `ok` / `error` / `rechazado`). El orquestador envía `usuario` y `modelo` en el
 `_meta` de cada llamada.
 
+## UI y Panel de Soberanía
+
+```bash
+make seed && make ui-sim   # UI contra el simulador de eventos: http://127.0.0.1:8766
+```
+
+Herramientas MCP y panel reales; modelos simulados. Detalle en [docs/UI.md](docs/UI.md).
+
 ## Configuración
 
 `config.yaml` define modelos, rutas, límites y reglas de anomalías. Cualquier clave se sobreescribe por
@@ -106,7 +114,7 @@ centinela/
 ├── scripts/        # seed.py, pull_models.sh
 ├── mcp_server/     # servidor MCP banco-atitlan
 ├── orchestrator/   # Fase 2
-├── web/            # Fase 5
+├── web/            # UI de una página con assets locales
 ├── data/           # banco.db (generada), politicas/, documentos_demo/, vectores/
 ├── docs/           # DECISIONES.md
 └── tests/

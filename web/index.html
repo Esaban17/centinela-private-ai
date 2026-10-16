@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Todo se sirve desde este mismo equipo: la política bloquea cualquier recurso externo. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self' ws://127.0.0.1:* ws://localhost:*; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <title>Centinela · Banco Atitlán (ficticio) · DEMO</title>
+  <link rel="icon" href="img/centinela.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/centinela.css">
+</head>
+<body>
+  <header class="barra">
+    <div class="marca">
+      <img src="img/centinela.svg" alt="" class="logo" width="44" height="44">
+      <div>
+        <h1>Centinela</h1>
+        <p class="sub" id="banco">Banco Atitlán (ficticio) · Asistente de operaciones con IA privada</p>
+      </div>
+    </div>
+    <div class="demo" id="marca-demo" title="Todos los datos son ficticios">DEMO / DATOS FICTICIOS</div>
+    <div class="estado-barra">
+      <span class="pildora" id="estado-ws" data-estado="conectando">Conectando…</span>
+      <span class="pildora" id="estado-red" data-estado="desconocido">Red: …</span>
+      <span class="pildora grande" id="estado-salientes" data-estado="desconocido">Conexiones externas: …</span>
+    </div>
+  </header>
+
+  <main class="zonas">
+    <!-- 1. Conversación -->
+    <section class="zona conversacion" aria-label="Conversación">
+      <div class="zona-titulo">
+        <h2>Conversación</h2>
+        <div class="acciones-titulo">
+          <button type="button" class="boton-icono" id="btn-silencio" aria-pressed="false" title="Silenciar la voz de Centinela">🔊 Voz</button>
+          <button type="button" class="boton-icono" id="btn-nueva" title="Empezar una sesión nueva">Nueva sesión</button>
+        </div>
+      </div>
+      <div class="mensajes" id="mensajes" aria-live="polite"></div>
+      <div class="atajos" id="atajos" aria-label="Preguntas del guion"></div>
+      <form class="entrada" id="form-entrada" autocomplete="off">
+        <button type="button" class="boton-mic" id="btn-mic" title="Mantenga presionado (o la barra espaciadora) para hablar">
+          <span class="mic-icono" aria-hidden="true">🎙</span><span class="mic-texto">Hablar</span>
+        </button>
+        <textarea id="texto" rows="1" placeholder="Escriba su pregunta…"></textarea>
+        <button type="button" class="boton-icono" id="btn-doc" title="Analizar un documento">📄</button>
+        <button type="submit" class="boton-primario" id="btn-enviar">Enviar</button>
+        <button type="button" class="boton-peligro oculto" id="btn-cancelar">Detener</button>
+        <input type="file" id="archivo" accept="image/png,image/jpeg,application/pdf" hidden>
+      </form>
+      <div class="menu-doc oculto" id="menu-doc">
+        <p>Documentos de muestra</p>
+        <div id="lista-docs"></div>
+        <button type="button" class="boton-secundario" id="btn-subir">Subir un archivo…</button>
+      </div>
+    </section>
+
+    <!-- 2. Visor -->
+    <section class="zona visor" aria-label="Visor">
+      <div class="zona-titulo">
+        <h2>Visor</h2>
+        <div class="historial-visor" id="historial-visor"></div>
+      </div>
+      <div class="visor-cuerpo" id="visor">
+        <div class="vacio">
+          <p>Aquí aparecen los documentos analizados, las tablas y las gráficas de cada consulta.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Panel de Soberanía -->
+    <section class="zona panel" aria-label="Panel de Soberanía">
+      <div class="zona-titulo"><h2>Panel de Soberanía</h2><span class="hora" id="panel-hora"></span></div>
+      <div class="panel-cuerpo">
+        <div class="tarjeta salientes" id="tarjeta-salientes" data-estado="desconocido">
+          <p class="etiqueta">Conexiones salientes a internet</p>
+          <p class="cifra" id="salientes-cifra">–</p>
+          <p class="detalle" id="salientes-detalle">Midiendo con psutil…</p>
+          <ul class="lista-salientes" id="salientes-lista"></ul>
+        </div>
+
+        <div class="fila-2">
+          <div class="tarjeta red" id="tarjeta-red" data-estado="desconocido">
+            <p class="etiqueta">Red del equipo</p>
+            <p class="valor" id="red-valor">–</p>
+            <p class="detalle" id="red-detalle"></p>
+          </div>
+          <div class="tarjeta costo">
+            <p class="etiqueta">Costo marginal local</p>
+            <p class="valor verde">Q0.00</p>
+            <p class="detalle" id="costo-equivalente">Equivalente en API: –</p>
+          </div>
+        </div>
+
+        <div class="tarjeta">
+          <p class="etiqueta">Acumulado de la sesión</p>
+          <div class="kpis">
+            <div><span class="kpi" id="a-tokens">0</span><span class="kpi-et">tokens procesados</span></div>
+            <div><span class="kpi" id="a-herr">0</span><span class="kpi-et">herramientas</span></div>
+            <div><span class="kpi" id="a-docs">0</span><span class="kpi-et">documentos</span></div>
+            <div><span class="kpi" id="a-modelos">0</span><span class="kpi-et">modelos distintos</span></div>
+          </div>
+          <div class="chips-modelos" id="a-lista-modelos"></div>
+        </div>
+        <div class="tarjeta">
+          <p class="etiqueta">Modelos cargados <span class="tenue" id="ollama-total"></span></p>
+          <ul class="lista-modelos" id="lista-modelos"><li class="tenue">Consultando Ollama…</li></ul>
+          <div class="memoria">
+            <div class="barra-mem"><div class="relleno" id="mem-relleno"></div></div>
+            <p class="detalle" id="mem-detalle"></p>
+          </div>
+        </div>
+
+        <div class="tarjeta">
+          <p class="etiqueta">Último turno</p>
+          <div class="kpis">
+            <div><span class="kpi" id="k-ttft">–</span><span class="kpi-et">primer token</span></div>
+            <div><span class="kpi" id="k-tps">–</span><span class="kpi-et">tokens/s</span></div>
+            <div><span class="kpi" id="k-tin">–</span><span class="kpi-et">tokens entrada</span></div>
+            <div><span class="kpi" id="k-tout">–</span><span class="kpi-et">tokens salida</span></div>
+          </div>
+          <div class="etapas" id="etapas"></div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <div class="grabando oculto" id="grabando" role="status">● Escuchando… suelte para enviar</div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
