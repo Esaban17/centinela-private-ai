@@ -30,7 +30,8 @@ async def test_lista_de_herramientas_y_anotaciones(servidor):
     async with Client(servidor) as c:
         tools = {t.name: t for t in (await c.list_tools()).tools}
     assert set(tools) == {"buscar_cliente", "resumen_cliente", "movimientos", "detectar_anomalias", "consulta_sql",
-                          "buscar_politicas", "alertas_infraestructura", "crear_ticket", "actualizar_ticket"}
+                          "buscar_politicas", "alertas_infraestructura", "crear_ticket", "actualizar_ticket",
+                          "validar_documento"}
     assert tools["crear_ticket"].annotations.read_only_hint is False
     assert tools["consulta_sql"].annotations.read_only_hint is True
     # El parámetro de aprobación lo resuelve el servidor; el modelo no puede «autoaprobarse».
