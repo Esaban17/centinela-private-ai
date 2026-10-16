@@ -1,0 +1,81 @@
+# Configuración de Centinela — demo de IA privada 100 % local.
+# DEMO / DATOS FICTICIOS. Ningún valor de este archivo apunta a servicios externos.
+# Cualquier clave puede sobreescribirse con variables de entorno (ver .env.example).
+
+demo:
+  banco: "Banco Atitlán (ficticio)"
+  marca_demo: "DEMO / DATOS FICTICIOS"
+  zona_horaria: "America/Guatemala"
+
+rutas:
+  db: "data/banco.db"
+  politicas: "data/politicas"
+  vectores: "data/vectores/politicas.db"
+  documentos_demo: "data/documentos_demo"
+  modelos_voz: "modelos"          # pesos de Whisper/Kokoro descargados en la instalación
+
+seed:
+  semilla: 20261016
+  clientes: 200
+  transacciones_objetivo: 5000
+  dias_historia: 180
+  # Fecha "de hoy" para la demo. Vacío = fecha del día en que se corre `make seed`.
+  # Las herramientas usan esta fecha como "ahora", así el guion no depende del reloj.
+  fecha_referencia: ""
+
+ollama:
+  url: "http://127.0.0.1:11434"
+  keep_alive: -1                 # nunca descargar modelos durante la demo
+  # Variables recomendadas para `ollama serve` (las aplica scripts/ollama_env.sh en Fase 2):
+  #   OLLAMA_MAX_LOADED_MODELS=4  OLLAMA_NUM_PARALLEL=1  OLLAMA_KEEP_ALIVE=-1
+  #   OLLAMA_FLASH_ATTENTION=1    OLLAMA_KV_CACHE_TYPE=q8_0
+
+# Perfil 48 GB (por defecto). Etiquetas verificadas en ollama.com el 2026-10-16.
+modelos:
+  agente:
+    nombre: "qwen3.6:35b-a3b-q4_K_M"      # MoE 35B-A3B, tools + thinking, ~24 GB
+    num_ctx: 16384
+    think: false                         # medir en Fase 2; activar solo si mejora el guion
+  rapido:
+    nombre: "qwen3:4b-instruct-2507-q4_K_M"  # ~2.5 GB, sin modo thinking → baja latencia
+    num_ctx: 4096
+  vision:
+    nombre: "qwen3-vl:4b-instruct"        # ~3.3 GB. Perfil 64 GB: qwen3-vl:8b-instruct
+    num_ctx: 8192
+  embeddings:
+    nombre: "bge-m3"                      # multilingüe, ~1.2 GB, 1024 dims
+  stt:
+    nombre: "mlx-community/whisper-large-v3-turbo"
+    idioma: "es"
+  tts:
+    motor: "kokoro"                       # kokoro | say
+    voz_kokoro: "em_alex"                 # voces es: ef_dora, em_alex, em_santa
+    voz_say: "Paulina"                    # respaldo macOS (es-MX)
+
+# Alternativas probadas en el mismo presupuesto (cambiar aquí, no en el código):
+#   agente plan B:  gemma4:26b-a4b-it-qat (~16 GB)  |  qwen3:30b-a3b-instruct-2507-q4_K_M (~19 GB)
+#   rapido:         gemma4:e2b-it-qat (~4.3 GB)     |  qwen3.5:2b (~2.7 GB)
+#   embeddings:     qwen3-embedding:0.6b            |  nomic-embed-text-v2-moe
+
+mcp:
+  servidor: "banco-atitlan"
+  max_filas: 200                 # LIMIT forzado en consulta_sql y movimientos
+  timeout_sql_ms: 2000
+  # Las herramientas de escritura piden confirmación humana al cliente MCP (elicitation).
+  # Si el cliente no soporta elicitation, la escritura se rechaza.
+  escritura_requiere_confirmacion: true
+
+anomalias:
+  dias_base: 120                 # historia previa usada como línea base
+  umbral_z: 3.0
+  horario_inicio: 0              # 00:00
+  horario_fin: 5                 # 05:59
+  rafaga_minutos: 30
+  rafaga_min_transacciones: 4
+
+costos:
+  # Precios de referencia por millón de tokens. Los fija Estuardo; vacíos por defecto.
+  moneda: "USD"
+  tipo_cambio_gtq: 7.7
+  precio_entrada_millon: null
+  precio_salida_millon: null
