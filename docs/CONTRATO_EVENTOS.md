@@ -1,6 +1,10 @@
 # Contrato de eventos: orquestador ↔ UI (y puntos de enganche)
 
-Versión del contrato: **1**. Dueño: Fase 2 (orquestador). Si cambia, sube la versión y se avisa a las fases 3, 4 y 5.
+Versión del contrato: **1** (revisión 1.1, solo agregados). Dueño: Fase 2 (orquestador). Un cambio incompatible sube
+la versión y se avisa a las fases 3, 4 y 5.
+
+Revisión 1.1: mensaje `preferencias`, evento `pong`, código `documento_ilegible`, voz en modo
+`primeras_oraciones` (locutor de la Fase 4) y `ollama.chat` acepta imágenes en bytes y `opciones`.
 
 Todo es local: el orquestador escucha en `127.0.0.1:<orquestador.puerto>` (8765 por defecto). La UI se sirve
 desde el mismo origen (`web/`), así que no hace falta CORS ni nada externo.
@@ -99,7 +103,8 @@ es el del modelo agente (tokens de salida / tiempo de generación que reporta Ol
 | `error` | `codigo`, `mensaje` (amable, en español), `etapa` (o `null`), `recuperable` (bool) |
 
 Códigos: `turno_en_curso`, `tiempo_agotado`, `ollama_no_disponible`, `mcp_no_disponible`, `max_iteraciones`,
-`voz_no_disponible`, `vision_no_disponible`, `documento_no_encontrado`, `mensaje_invalido`, `interno`.
+`voz_no_disponible`, `vision_no_disponible`, `documento_no_encontrado`, `documento_ilegible`, `mensaje_invalido`,
+`interno`.
 Un turno con error siempre termina con `turno.fin` (`ok: false`): la UI nunca queda esperando.
 
 ## 4. Lo que la UI envía
@@ -110,10 +115,12 @@ Por WebSocket (JSON):
 {"tipo": "mensaje", "texto": "¿Cómo está la cartera de Lucía Cojtí?", "documento_id": null}
 {"tipo": "aprobacion", "aprobacion_id": "ap-7f3c", "aprobar": true, "comentario": ""}
 {"tipo": "cancelar"}
+{"tipo": "preferencias", "hablar": false}
 {"tipo": "ping"}
 ```
 
-`ping` responde con un evento `pong` (sin `turno_id`). Un `mensaje` mientras hay un turno en curso devuelve
+`ping` responde con un evento `pong` (sin `turno_id`). `preferencias` con `hablar: false` es el botón de silenciar:
+corta la voz que está sonando y no sintetiza en los turnos siguientes (`true` la reactiva). Un `mensaje` mientras hay un turno en curso devuelve
 `error` con `turno_en_curso`.
 
 Por REST:
@@ -124,6 +131,7 @@ Por REST:
 | `POST /api/sesiones/{id}/audio` | multipart `audio` (webm/ogg/wav) | `202 {"turno_id"}`; emite `transcripcion` y sigue como un turno de voz |
 | `POST /api/aprobaciones/{aprobacion_id}` | `{"aprobar": true, "comentario": ""}` | `200 {"ok": true}` |
 | `POST /api/sesiones/{id}/cancelar` | — | `200 {"ok": true}` |
+| `POST /api/sesiones/{id}/preferencias` | `{"hablar": false}` | `200 {"ok": true}` |
 | `POST /api/documentos` | multipart `archivo` (png/jpg/pdf) | `200 {"documento_id", "nombre"}` |
 | `GET /api/documentos` | — | `[{documento_id, nombre}]` (incluye los de `data/documentos_demo/`) |
 | `GET /api/documentos/{documento_id}` | — | el archivo, para el visor |
@@ -152,10 +160,18 @@ reemplaza por las reales si existen los módulos indicados. Cada fase entrega su
 - `Transcripcion`: `texto`, `modelo`, `idioma`.
 - `Audio`: `datos` (bytes WAV), `formato`, `motor`. El orquestador guarda el audio, emite `voz.audio` con su
   `url` y mide la etapa `tts`.
-- `ollama` es el cliente del orquestador (`orchestrator/ollama.py`): `await ollama.chat(rol, mensajes, imagenes=...)`
-  ya registra el modelo usado y los tokens; la visión debería usarlo para que el chip y el panel salgan solos.
-- El texto para voz es `resumen_hablado` (lo genera el modelo rápido). Se parte en oraciones y se sintetiza una por
-  una: la primera suena mientras se generan las demás.
+- `ollama` es el cliente del orquestador (`orchestrator/ollama.py`):
+  `await ollama.chat(rol, mensajes, imagenes=[bytes | base64], formato=esquema, opciones={...})` devuelve un
+  `RespuestaLLM` (`.contenido`, `.tokens_entrada`, …) y ya registra el modelo usado y los tokens; la visión lo usa
+  para que el chip y el panel salgan solos. Las imágenes van al último mensaje con `role: user`.
+- Las fábricas pueden lanzar cualquier excepción (p. ej. `VozNoDisponible`): el componente queda «no disponible».
+  En ejecución, un error de STT da `voz_no_disponible`; uno de visión, `documento_ilegible` (si es `ErrorExtraccion`,
+  con su mensaje); uno de TTS, un `aviso` y la respuesta sigue en pantalla.
+- **Qué se habla** (`voz.modo_habla` en `config.yaml`):
+  - `primeras_oraciones` (recomendado por la Fase 4): si el sintetizador tiene `locutor()`, el orquestador lo
+    alimenta con cada `llm.delta`, emite un `voz.audio` por cada fragmento en cuanto está listo y no pide
+    `resumen_hablado` (llega `null`). La primera palabra suena antes de que termine la respuesta escrita.
+  - `resumen`: el modelo rápido genera `resumen_hablado` al final y se sintetiza oración por oración.
 
 ## 6. Panel de soberanía (Fase 5)
 
