@@ -3,7 +3,7 @@ PY      ?= .venv/bin/python
 OFFLINE := HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 HF_HUB_DISABLE_TELEMETRY=1 ANONYMIZED_TELEMETRY=False DO_NOT_TRACK=1
 INSPECTOR_VERSION ?= 2.11.0
 
-.PHONY: help setup seed ingest documentos vision mcp inspector test pull-models warmup run ensayo check-offline
+.PHONY: help setup seed ingest documentos vision mcp inspector test pull-models run cli medir warmup ensayo check-offline
 
 help:
 	@echo "make setup        Crea .venv (Python 3.12) e instala dependencias"
@@ -15,6 +15,9 @@ help:
 	@echo "make inspector    Abre MCP Inspector contra el servidor (requiere Node; solo durante el desarrollo)"
 	@echo "make test         Corre las pruebas"
 	@echo "make pull-models  Descarga los modelos de config.yaml en Ollama (requiere internet, una vez)"
+	@echo "make run          Levanta el orquestador en http://127.0.0.1:8765 (arranca el servidor MCP solo)"
+	@echo "make cli          Conversa con Centinela en la terminal (aprobaciones con s/n)"
+	@echo "make medir        Mide el modelo agente con el guion (MODELOS=\"a b\" CORRIDAS=5)"
 
 setup:
 	uv venv --python 3.12 .venv
@@ -44,5 +47,14 @@ test:
 pull-models:
 	./scripts/pull_models.sh
 
-warmup run ensayo check-offline:
-	@echo "«$@» llega en las fases 2-6 (ver README)."
+run:
+	$(OFFLINE) $(PY) -m orchestrator
+
+cli:
+	$(OFFLINE) $(PY) -m orchestrator.cli
+
+medir:
+	$(OFFLINE) $(PY) -m scripts.medir_agente --corridas $(or $(CORRIDAS),3) $(if $(MODELOS),--modelos $(MODELOS),)
+
+warmup ensayo check-offline:
+	@echo "«$@» llega en las fases 5-6 (ver README)."

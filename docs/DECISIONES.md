@@ -104,3 +104,23 @@ Variables de Ollama para la demo: `OLLAMA_MAX_LOADED_MODELS=4`, `OLLAMA_KEEP_ALI
    esperados para medir la extracción en la Mac (`make vision`).
 8. **Fuentes locales.** Los PNG se dibujan con Arial de macOS (o DejaVu en Linux); la ruta es configurable en
    `vision.fuentes`. No se descarga nada.
+
+## 5. Orquestador (Fase 2)
+
+1. **Un solo proceso MCP para toda la demo**, hijo del orquestador por stdio y abierto mientras viva la API.
+   Las herramientas se descubren con `tools/list` y se pasan a Ollama tal cual: agregar una herramienta en el
+   servidor no requiere tocar el orquestador.
+2. **La tarjeta de aprobación es la elicitation del servidor.** El orquestador no decide qué es escritura: el
+   servidor pide la confirmación, el orquestador la muestra y devuelve la respuesta. Si nadie contesta en
+   `timeouts_s.aprobacion`, se rechaza. Las escrituras se serializan (un candado), para saber a qué turno
+   pertenece cada pedido en el protocolo clásico.
+3. **Clasificación de intención en paralelo** con la primera llamada al agente: el chip del modelo rápido
+   aparece sin sumar latencia. No se usa para filtrar herramientas (eso sí podría romper el guion).
+4. **Cliente HTTP propio para Ollama** (`httpx`, `trust_env=False`) en lugar de la librería `ollama`: control de
+   streaming y métricas (`prompt_eval_count`, `eval_count`, `eval_duration`), y ninguna variable de proxy del
+   entorno puede sacarlo de `localhost`.
+5. **Voz en modo `primeras_oraciones` por defecto** (propuesta de la Fase 4): el locutor habla mientras el agente
+   escribe y no se espera al resumen del modelo rápido. Con `resumen` se recupera la versión más corta.
+6. **El modelo agente se elige midiendo** con `make medir` en la Mac (no se pudo en el contenedor Linux, sin GPU
+   ni modelos). Criterio: ≥ 90 % de éxito en las preguntas del guion y primer token ≤ 2 s; si `qwen3.6` no llega,
+   probar `gemma4:26b-a4b-it-qat` antes de alargar el prompt.

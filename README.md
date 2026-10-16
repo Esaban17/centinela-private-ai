@@ -14,7 +14,7 @@ Las decisiones de modelos, el presupuesto de memoria y los ajustes a la arquitec
 | Fase | Estado |
 |---|---|
 | 1. Datos + MCP | ✅ seed determinista, servidor `banco-atitlan` con 9 herramientas, 2 recursos, 2 prompts y pruebas |
-| 2. Agente en texto | pendiente |
+| 2. Agente en texto | ✅ orquestador FastAPI (host MCP por stdio), loop del agente, enrutamiento multi-modelo, aprobación humana, eventos por WebSocket/SSE ([contrato](docs/CONTRATO_EVENTOS.md)) |
 | 3. RAG + visión | ✅ 7 políticas ficticias, ingesta con búsqueda híbrida (sqlite-vec + FTS5), 4 documentos demo, extracción con visión validada con Pydantic y `validar_documento` |
 | 4. Voz | pendiente |
 | 5. UI + panel de soberanía | pendiente |
@@ -72,6 +72,30 @@ Cualquier cliente que lance servidores por stdio sirve. Ejemplo de configuració
   }
 }
 ```
+
+## Orquestador — Fase 2
+
+```bash
+ollama serve                 # en otra terminal (como servicio, no la app de la barra de menú)
+make run                     # API en http://127.0.0.1:8765 · /api/docs · /api/salud
+make cli                     # o conversar en la terminal, sin UI
+make medir MODELOS="qwen3.6:35b-a3b-q4_K_M gemma4:26b-a4b-it-qat" CORRIDAS=5
+```
+
+- El orquestador arranca el servidor MCP como proceso hijo por stdio, descubre sus herramientas y las pasa a
+  Ollama como funciones. Lo que el servidor exponga, el agente lo puede usar.
+- **Varios modelos, cada uno para su tarea:** el agente razona con herramientas; el modelo rápido clasifica la
+  intención (en paralelo, sin sumar latencia), titula los tickets y resume la respuesta para la voz; la visión
+  lee documentos. Cada uso emite un «chip» (`modelo.uso`) con el modelo y la tarea.
+- **Humano en el circuito:** `crear_ticket` y `actualizar_ticket` piden aprobación desde el servidor MCP
+  (elicitation). El orquestador la convierte en la tarjeta `aprobacion.solicitada` y espera Aprobar/Rechazar;
+  si nadie responde en `orquestador.timeouts_s.aprobacion`, se rechaza.
+- **Auditoría:** cada llamada va con `usuario` y `modelo` en `_meta`; el servidor la registra. `GET /api/auditoria`.
+- **Logs** en la terminal con las cuentas enmascaradas (`AT-•••42-01`). `CENTINELA_LOG=INFO` muestra cada paso.
+- **Memoria por sesión** (últimos `orquestador.memoria_mensajes` mensajes) y **timeouts por etapa** con mensaje
+  amable: un turno siempre termina con `turno.fin`, aunque falle Ollama o el servidor MCP.
+- `make medir` corre las preguntas del guion (`config.yaml → guion`) contra cada modelo sobre una copia de la
+  base y reporta éxito de tool calling y latencias p50/p95. Sirve para elegir el agente en la Mac.
 
 ## Fase 3: RAG de políticas y visión documental
 
@@ -137,9 +161,9 @@ centinela/
 ├── scripts/        # seed.py, ingest.py, gen_documentos.py, pull_models.sh
 ├── mcp_server/     # servidor MCP banco-atitlan (incluye la búsqueda RAG)
 ├── documentos/     # esquemas Pydantic, extracción con visión y validación cruzada
-├── orchestrator/   # Fase 2 (vision.py: gancho de visión de la Fase 3)
+├── orchestrator/   # FastAPI, host MCP, agente, cliente de Ollama, ganchos (vision.py de la Fase 3)
 ├── web/            # Fase 5
 ├── data/           # banco.db (generada), politicas/, documentos_demo/, vectores/
-├── docs/           # DECISIONES.md
+├── docs/           # DECISIONES.md, CONTRATO_EVENTOS.md
 └── tests/
 ```
