@@ -1,6 +1,6 @@
 """Costo equivalente estimado frente a un modelo de API por token.
 
-Los precios los configura Estuardo en `config.yaml` (sección `costos`). No hay precios
+Los precios están en `config.yaml` (sección `costos`; fuente en docs/DECISIONES.md §7). No hay precios
 quemados en el código: si no están configurados, se informa así y la UI no inventa cifras.
 """
 

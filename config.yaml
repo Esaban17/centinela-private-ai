@@ -182,13 +182,15 @@ anomalias:
   rafaga_min_transacciones: 4
 
 costos:
-  # Precios de referencia por millón de tokens. Los fija Estuardo; vacíos por defecto.
+  # Precios de referencia por millón de tokens: lo que costaría la sesión en una API Frontier de pago.
   # El panel los muestra como «estimación referencial» frente a «Costo marginal local: Q0.00».
+  # Fuente: precio de lista público de Claude Opus 5.5, $4 entrada / $20 salida por millón de tokens
+  # (platform.claude.com/docs/en/about-claude/pricing, consultado el 2026-10-17). Sin caché ni Batch.
   moneda: "USD"
   tipo_cambio_gtq: 7.7
-  precio_entrada_millon: null
-  precio_salida_millon: null
-  referencia: ""                 # texto opcional junto al costo, p. ej. "modelo frontier de referencia"
+  precio_entrada_millon: 4.00
+  precio_salida_millon: 20.00
+  referencia: "Claude Opus 5.5 (precio de lista, oct. 2026)"
 
 soberania:
   # Procesos vigilados además del orquestador y sus hijos (el servidor MCP). Coincidencia por nombre.
