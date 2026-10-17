@@ -13,6 +13,7 @@ se llame `restablecer()`, para no pagar el error en cada oración durante la dem
 from __future__ import annotations
 
 import logging
+import os
 import platform
 import shutil
 import subprocess
@@ -28,6 +29,10 @@ from .opciones import OpcionesVoz
 from .texto import normalizar_para_voz, tiene_contenido
 
 log = logging.getLogger("centinela.voz.tts")
+
+# ONNX Runtime (motor de Kokoro) trae telemetría 1DS encendida en macOS y la envía a Microsoft desde código
+# nativo, donde la guardia de salida (comun/salida.py) no llega. Debe fijarse antes de que se inicialice.
+os.environ.setdefault("ORT_DISABLE_TELEMETRY", "1")
 
 
 class TTSNoDisponible(RuntimeError):

@@ -112,3 +112,11 @@ def test_kokoro_falla_en_linux_sin_respaldo_y_say_principal(cfg):
     cfg["modelos"]["tts"]["respaldo"] = "kokoro"
     tts = crear_tts(desde_config(cfg))
     assert tts.principal.nombre == "say" and tts.respaldo.nombre == "kokoro"
+
+
+def test_telemetria_de_onnxruntime_apagada():
+    import os
+
+    import orchestrator.voz_local.tts  # noqa: F401
+
+    assert os.environ.get("ORT_DISABLE_TELEMETRY") == "1"
