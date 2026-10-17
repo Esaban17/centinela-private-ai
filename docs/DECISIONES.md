@@ -153,3 +153,17 @@ Variables de Ollama para la demo: `OLLAMA_MAX_LOADED_MODELS=4`, `OLLAMA_KEEP_ALI
 10. **Medido en el contenedor (Linux, sin GPU), con un Ollama simulado por HTTP:** warmup, ensayo y check-offline
     completan los 6 actos con 0 conexiones salientes. Las latencias reales, la memoria y el primer audio se miden en
     la Mac (GUION.md §6).
+
+## 7. Precios del costo equivalente (2026-10-17)
+
+El Panel de Soberanía compara la sesión con lo que habría costado en una API Frontier de pago. Como referencia se usa
+el **precio de lista público de Claude Opus 5.5: US$4 por millón de tokens de entrada y US$20 por millón de salida**
+([precios de la API](https://platform.claude.com/docs/en/about-claude/pricing), consultado el 2026-10-17).
+
+1. **Precio de lista, sin descuentos.** No se aplican caché de prompt ni Batch API: el panel compara contra lo que
+   pagaría un banco que manda cada pregunta a la API tal cual, y así la cifra no depende de supuestos de uso.
+2. **Se nombra el modelo en el panel** (`costos.referencia`), para que nadie lo lea como una tarifa genérica.
+3. **El tipo de cambio sigue en 7.7 GTQ/USD.** Es referencial; si cambia, basta editar `costos.tipo_cambio_gtq`.
+4. **Ejemplo:** una sesión con 60 000 tokens de entrada y 3 000 de salida da US$0.30 (≈ Q2.31) frente a
+   «Costo marginal local: Q0.00».
+5. Los precios de las API cambian; antes del evento conviene revisar la página de precios y actualizar la fecha aquí.

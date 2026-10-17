@@ -46,7 +46,7 @@ app.include_router(crear_router(cfg))
   ni DNS, porque eso sería una conexión saliente.
 - **Modelos cargados:** `GET /api/ps` de Ollama, sin proxy y solo si la URL es local.
 - **Costo equivalente:** `costos.precio_entrada_millon` y `costos.precio_salida_millon` de `config.yaml`
-  (vacíos por defecto). Sin precios, el panel lo dice y no inventa cifras. Siempre rotulado
+  (precio de lista de Claude Opus 5.5, ver DECISIONES.md §7). Sin precios, el panel lo dice y no inventa cifras. Siempre rotulado
   «estimación referencial», junto a «Costo marginal local: Q0.00».
 
 ## Simulador para ensayar la UI sin modelos

@@ -20,8 +20,8 @@ corren `make warmup`, `make ensayo` y `make check-offline`. Si cambia una pregun
 | Elegir el modelo agente | `make medir MODELOS="qwen3.6:35b-a3b-q4_K_M gemma4:26b-a4b-it-qat" CORRIDAS=5` | ≥ 90 % por pregunta. Si `qwen3.6` no llega, cambie de modelo antes de alargar el prompt |
 | Ensayo formal | `make ensayo` (10 corridas) | ✅ en los criterios; el detalle queda en `salida/ensayos/` |
 | Ensayo con voz | `make ensayo VOZ=1 CORRIDAS=3` con `make demo` **apagado** | primer audio p50 ≤ 5 s (objetivo; anote lo medido en §6) |
-| Elegir la voz | `make voces` y escuchar `salida/voces/index.html` | `modelos.tts.voz_kokoro` fijado (hoy `em_alex`, es-419) |
-| Precios del costo equivalente | `config.yaml → costos.precio_entrada_millon` y `precio_salida_millon` | el panel muestra un monto, no «configure precios» |
+| Elegir la voz | `make voces` y escuchar `salida/voces/index.html` | ✅ fijado en `em_alex` (es-419) |
+| Precios del costo equivalente | `config.yaml → costos` (hoy Claude Opus 5.5: US$4 / US$20 por millón, DECISIONES.md §7) | ✅ el panel muestra un monto; revisar que el precio siga vigente |
 | Memoria | `make warmup` → sección «Memoria (ollama ps)» | 4 modelos, 100 % en GPU, ≤ 35 GB. Si no: `make setup-mac LIMITE_GPU=1` o bajar `num_ctx` |
 | Video de respaldo | §4 | archivo en el escritorio **y** en una memoria USB |
 | MCP Inspector sin red | `make inspector` una vez con internet | queda en la caché de npm por si alguien pide verlo |
