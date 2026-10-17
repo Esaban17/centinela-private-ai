@@ -166,4 +166,5 @@ Grábelo con la configuración final, en la misma laptop y **con el Wi-Fi apagad
 
 | Fecha | Modelo agente | `make ensayo` (éxito) | p50 / p95 por turno | Primer audio p50 | Memoria `ollama ps` | Notas |
 |---|---|---|---|---|---|---|
-| | qwen3.6:35b-a3b-q4_K_M | | | | | |
+| 2026-10-16 | qwen3.6:35b-a3b-q4_K_M | Texto: 60/60 (100 %) · 0 conexiones salientes | p50 6.2–9.0 s (documento 11.9 s) / p95 7.2–13.0 s (documento 14.0 s) · 1.er token p50 2.1–6.1 s · 55 tok/s | — | 28.1 GB: agente 21.4 + rápido 2.7 + visión 3.4 + embeddings 0.6, todos sin vencimiento | M5 Pro 48 GB, `make ollama`. `make warmup` LISTO, `make medir` 18/18 |
+| 2026-10-16 | qwen3.6:35b-a3b-q4_K_M | Voz (`VOZ=1`): 60/60 (100 %) · 0 conexiones salientes | p50 7.4–12.1 s (documento 12.4 s) / p95 9.8–12.8 s (documento 15.7 s) · STT p50 0.5–0.7 s · 50 tok/s | 6.4 s (noc 3.6 s, cartera 10.7 s; peor p95 11.3 s): no cumple el objetivo de 5 s | igual | Con PR #9 (telemetría de ONNX Runtime) y PR #10 (regla del prompt). Sin ellos: 1 conexión saliente a Microsoft y fraude 7/10. Falta `check-offline ESTRICTO=1` |
