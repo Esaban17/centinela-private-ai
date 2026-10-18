@@ -197,7 +197,7 @@ details.citas summary { cursor: pointer; color: var(--violeta); font-weight: 600
 }
 .menu-doc p { margin: 0 0 .5rem; color: var(--tenue); font-size: .85rem; }
 .menu-doc #lista-docs button { display: block; width: 100%; text-align: left; margin-bottom: .4rem; }
-.grabando {
+#grabando {
   position: fixed; left: 50%; top: 5rem; transform: translateX(-50%); z-index: 10;
   background: var(--rojo); color: #fff; padding: .6rem 1.4rem; border-radius: 999px; font-weight: 700; font-size: 1.2rem;
 }
