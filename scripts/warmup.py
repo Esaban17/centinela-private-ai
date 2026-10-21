@@ -8,7 +8,8 @@
 4. Corre cada pregunta del guion una vez sobre una copia de la base: deja caliente el prompt del agente.
 5. Precalienta la voz. Whisper y Kokoro viven dentro del orquestador: si está levantado (`make demo`), se le
    pide a él; si no, se cargan aquí solo para dejar los pesos en la caché del disco.
-6. Verifica con /api/ps que los 4 modelos sigan cargados, sin vencimiento, en GPU y dentro del presupuesto.
+6. Verifica con /api/ps que los 4 modelos sigan cargados, sin vencimiento, en GPU y dentro del presupuesto
+   (el menor entre ollama.presupuesto_gb y lo que deja libre la RAM de este equipo).
 
     python -m scripts.warmup                 # todo
     python -m scripts.warmup --sin-guion     # solo modelos y voz (más rápido)
@@ -29,6 +30,7 @@ from typing import Any
 import httpx
 
 from comun import config, salida
+from comun import modelos as sel_modelos
 from comun.ollama_http import ClienteOllama, ErrorOllama
 from orchestrator import registro
 from orchestrator.ollama import Ollama, OllamaNoDisponible
@@ -42,14 +44,10 @@ def modelos_requeridos(cfg: dict[str, Any]) -> dict[str, str]:
     return {rol: cfg["modelos"][rol]["nombre"] for rol in ROLES}
 
 
-def con_etiqueta(nombre: str) -> str:
-    """Ollama lista «bge-m3» como «bge-m3:latest»."""
-    return nombre if ":" in nombre.rsplit("/", 1)[-1] else f"{nombre}:latest"
+con_etiqueta = sel_modelos.con_etiqueta
 
 
-def es_nube(nombre: str) -> bool:
-    etiqueta = nombre.rsplit(":", 1)[-1].lower() if ":" in nombre else ""
-    return etiqueta == "cloud" or etiqueta.endswith("-cloud")
+es_nube = sel_modelos.es_nube
 
 
 def revisar_nombres(modelos: dict[str, str]) -> list[Chequeo]:
@@ -107,6 +105,17 @@ def analizar_ps(ps: dict[str, Any], modelos: dict[str, str], presupuesto_gb: flo
         out.append(Chequeo("memoria de los modelos", estado, f"{total:.1f} GB de un presupuesto de "
                                                              f"{float(presupuesto_gb):.0f} GB"))
     return out
+
+
+def revisar_ram(cfg: dict[str, Any]) -> tuple[list[Chequeo], float | None]:
+    """La selección de modelos frente a la RAM de este equipo, y el presupuesto de Ollama que deja libre."""
+    r = (cfg.get("seleccion_modelos") or {}).get("resuelto") or {}
+    est = sel_modelos.estimar(cfg["modelos"], cfg, r.get("ram_gb"))
+    estado = {"ok": "ok", "justo": "aviso", "excede": "aviso"}[est["nivel"]]
+    out = [Chequeo(f"perfil {r.get('perfil', 'manual')} ({r.get('motivo', '')})", estado, est["mensaje"])]
+    out += [Chequeo("memoria", "aviso", a) for a in est["avisos"]]
+    voz = sum(f["gb"] or 0 for f in est["filas"] if f["rol"] in ("stt", "tts"))
+    return out, round(est["disponible_gb"] - voz, 1)
 
 
 def revisar_archivos(cfg: dict[str, Any]) -> list[Chequeo]:
@@ -233,6 +242,11 @@ async def principal(args: argparse.Namespace, cfg: dict[str, Any]) -> list[Chequ
     modelos = modelos_requeridos(cfg)
     fase("Modelos de config.yaml", revisar_nombres(modelos) or [Chequeo("todas las etiquetas son locales", "ok")],
          resultado)
+    chequeos_ram, libre_ollama = revisar_ram(cfg)
+    fase("RAM del equipo", chequeos_ram, resultado)
+    presupuesto = cfg["ollama"].get("presupuesto_gb")
+    if libre_ollama is not None:
+        presupuesto = min(float(presupuesto), libre_ollama) if presupuesto else libre_ollama
 
     url = cfg["ollama"]["url"]
     cliente = ClienteOllama.desde_config(cfg, timeout=600)
@@ -266,7 +280,7 @@ async def principal(args: argparse.Namespace, cfg: dict[str, Any]) -> list[Chequ
             print("\n▸ Precalentando la voz…")
             fase("Voz", await precalentar_voz(cfg), resultado)
 
-        fase("Memoria (ollama ps)", analizar_ps(cliente.cargados(), modelos, cfg["ollama"].get("presupuesto_gb")),
+        fase("Memoria (ollama ps)", analizar_ps(cliente.cargados(), modelos, presupuesto),
              resultado)
     finally:
         cliente.cerrar()

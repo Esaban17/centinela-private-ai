@@ -3,6 +3,7 @@ import { Conexion, pedir, subirDocumento } from './conexion.js';
 import { Conversacion } from './conversacion.js';
 import { Visor } from './visor.js';
 import { Panel } from './panel.js';
+import { SelectorModelos } from './modelos.js';
 import { PushToTalk, Reproductor } from './voz.js';
 import { el, almacenar } from './util.js';
 
@@ -23,6 +24,7 @@ const conversacion = new Conversacion($('mensajes'), {
 });
 const visor = new Visor($('visor'), $('historial-visor'));
 const panel = new Panel();
+const selector = new SelectorModelos();
 const reproductor = new Reproductor();
 let enCurso = false;
 let conexion;
@@ -58,6 +60,7 @@ function alEvento(ev) {
   conversacion.evento(ev);
   visor.evento(ev);
   panel.evento(ev);
+  selector.evento(ev);
 }
 
 function conectar() {
@@ -197,3 +200,4 @@ $('btn-nueva').addEventListener('click', () => {
 conectar();
 cargarGuion();
 panel.iniciar();
+selector.iniciar();

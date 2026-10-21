@@ -53,10 +53,15 @@ def _llamador_orquestador(ollama: Any, opciones: dict[str, Any]) -> LlamarVision
 class Vision:
     def __init__(self, cfg: dict[str, Any], llamar: LlamarVision):
         v = cfg.get("vision", {})
-        self.modelo = cfg["modelos"]["vision"]["nombre"]
+        self.cfg = cfg
         self.max_lado = int(v.get("max_lado_px", 1600))
         self.clasificar = bool(v.get("clasificar", True))
         self._llamar = llamar
+
+    @property
+    def modelo(self) -> str:
+        """Se lee en cada uso: la UI puede cambiar el modelo de visión en caliente."""
+        return self.cfg["modelos"]["vision"]["nombre"]
 
     async def extraer(self, imagen: bytes, nombre: str, tipo: str | None = None) -> Extraccion:
         """Imagen → campos validados con Pydantic. Lanza `ErrorExtraccion` con un mensaje para la persona."""
@@ -74,4 +79,5 @@ def crear_vision(cfg: dict[str, Any], ollama: Any | None = None) -> Vision:
 
             ollama = ClienteOllama.desde_config(cfg, timeout=float(cfg.get("vision", {}).get("timeout_s", 90)))
         return Vision(cfg, llamador_ollama(ollama, cfg["modelos"]["vision"]["nombre"], opciones))
-    return Vision(cfg, _llamador_orquestador(ollama, opciones))
+    # El cliente del orquestador agrega el num_ctx vigente de config (cambia si la UI elige otro modelo).
+    return Vision(cfg, _llamador_orquestador(ollama, {"temperature": 0}))

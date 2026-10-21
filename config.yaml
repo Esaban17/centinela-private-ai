@@ -73,6 +73,49 @@ modelos:
 #   rapido:         gemma4:e2b-it-qat (~4.3 GB)     |  qwen3.5:2b (~2.7 GB)
 #   embeddings:     qwen3-embedding:0.6b            |  nomic-embed-text-v2-moe
 
+# Selección de modelos según la RAM del equipo (comun/modelos.py, `make modelos` y botón «Modelos» de la UI).
+# Orden: config.yaml → config.local.yaml (lo escribe la UI al aplicar) → perfil → variables de entorno.
+seleccion_modelos:
+  # auto = el perfil más grande cuya ram_minima_gb cabe en este equipo (RAM real con psutil).
+  # 48gb | 24gb = ese perfil siempre. manual = la sección `modelos` tal cual, sin perfil.
+  perfil: "auto"
+  # RAM que se deja a macOS, al navegador de la UI y a los procesos de Python (orquestador y MCP).
+  # La alerta salta si modelos + reserva pasan de la RAM del equipo.
+  reserva_sistema_gb: 6
+  umbral_justo: 0.9              # modelos + reserva ≥ 90 % de la RAM = «justo» (amarillo); > 100 % = «excede» (rojo)
+  perfiles:
+    48gb:                        # la sección `modelos` de arriba, medida en una M5 Pro de 48 GB (GUION.md §6)
+      ram_minima_gb: 40
+      descripcion: "Un modelo por tarea: agente MoE 35B, rápido, visión y embeddings (~30 GB)"
+    24gb:                        # Mac de 24 GB: el agente también lee los documentos (sin modelo de visión aparte)
+      ram_minima_gb: 0
+      descripcion: "Agente Gemma 4 12B que también hace la visión, más rápido y embeddings (~14 GB)"
+      agente:     {nombre: "gemma4:12b-it-qat", num_ctx: 16384, think: false}
+      vision:     {nombre: "gemma4:12b-it-qat", num_ctx: 16384, think: false}   # mismo num_ctx: Ollama no lo recarga
+  # Memoria de cada modelo ya cargado en Ollama (pesos + caché KV q8_0 con el num_ctx de `ctx`).
+  # medido = `ollama ps` en la Mac; estimado = tamaño de descarga + caché KV, hay que medirlo.
+  # Un modelo que no está aquí se estima con el tamaño que reporta Ollama (/api/tags).
+  catalogo:
+    "qwen3.6:35b-a3b-q4_K_M":             {gb: 21.4, ctx: 16384, kv_gb_8k: 0.5, roles: [agente, vision], fuente: medido}
+    "qwen3:30b-a3b-instruct-2507-q4_K_M": {gb: 19.5, ctx: 16384, kv_gb_8k: 0.5, roles: [agente], fuente: estimado}
+    "gemma4:26b-a4b-it-qat":              {gb: 16.8, ctx: 16384, kv_gb_8k: 0.4, roles: [agente, vision], fuente: estimado}
+    "gpt-oss:20b":                        {gb: 14.5, ctx: 16384, kv_gb_8k: 0.3, roles: [agente], fuente: estimado}
+    "gemma4:12b-it-qat":                  {gb: 8.4,  ctx: 16384, kv_gb_8k: 0.6, roles: [agente, vision, rapido], fuente: estimado}
+    "gemma4:e4b-it-qat":                  {gb: 6.6,  ctx: 8192,  kv_gb_8k: 0.3, roles: [rapido, vision], fuente: estimado}
+    "gemma4:e2b-it-qat":                  {gb: 4.6,  ctx: 4096,  kv_gb_8k: 0.2, roles: [rapido, vision], fuente: estimado}
+    "qwen3:4b-instruct-2507-q4_K_M":      {gb: 2.7,  ctx: 4096,  kv_gb_8k: 0.6, roles: [rapido], fuente: medido}
+    "qwen3.5:2b":                         {gb: 2.9,  ctx: 4096,  kv_gb_8k: 0.2, roles: [rapido], fuente: estimado}
+    "qwen3-vl:4b-instruct":               {gb: 3.4,  ctx: 8192,  kv_gb_8k: 0.6, roles: [vision], fuente: medido}
+    "qwen3-vl:8b-instruct":               {gb: 6.9,  ctx: 8192,  kv_gb_8k: 0.7, roles: [vision], fuente: estimado}
+    "bge-m3":                             {gb: 0.6,  roles: [embeddings], fuente: medido}
+    "qwen3-embedding:0.6b":               {gb: 0.8,  roles: [embeddings], fuente: estimado}
+    "nomic-embed-text-v2-moe":            {gb: 1.0,  roles: [embeddings], fuente: estimado}
+  # Voz: corre dentro del orquestador, no en Ollama. Se suma según el motor configurado.
+  voz:
+    stt_mlx_gb: 2.0              # whisper-large-v3-turbo en MLX (usa la GPU, como Ollama)
+    stt_faster_gb: 1.6           # faster-whisper en CPU
+    tts_kokoro_gb: 0.4
+
 voz:
   ffmpeg: "ffmpeg"               # decodifica el audio del navegador (brew install ffmpeg)
   max_segundos_audio: 30         # lo que exceda se recorta

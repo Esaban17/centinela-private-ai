@@ -32,7 +32,7 @@ if ! curl -s --max-time 2 http://127.0.0.1:11434/api/version >/dev/null; then
   for _ in $(seq 1 30); do curl -s --max-time 1 http://127.0.0.1:11434/api/version >/dev/null && break; sleep 1; done
 fi
 
-paso "Modelos de Ollama de config.yaml (~31 GB; la primera vez tarda)"
+paso "Modelos de Ollama del perfil que corresponde a esta RAM (make modelos; ~31 GB en 48 GB, ~11 GB en 24 GB)"
 make pull-models
 
 paso "Modelos de voz: Whisper (MLX) y Kokoro en ./modelos"

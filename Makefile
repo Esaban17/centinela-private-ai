@@ -4,7 +4,7 @@ OFFLINE := HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 HF_HUB_DISABLE_TELEMETRY=1 AN
 INSPECTOR_VERSION ?= 2.11.0
 
 .PHONY: help setup setup-mac seed ingest documentos vision mcp inspector test pull-models ui-sim voz-modelos voces voz-prueba \
-        ollama demo run cli logs warmup ensayo medir check-offline reset
+        modelos ollama demo run cli logs warmup ensayo medir check-offline reset
 
 help:
 	@echo "── El día de la demo (ver GUION.md) ──"
@@ -25,6 +25,7 @@ help:
 	@echo "make mcp          Corre el servidor MCP banco-atitlan por stdio"
 	@echo "make inspector    Abre MCP Inspector contra el servidor (requiere Node; solo durante el desarrollo)"
 	@echo "make test         Corre las pruebas"
+	@echo "make modelos      Perfil de modelos elegido y si cabe en la RAM de este equipo (RAM_GB=24 simula otra Mac)"
 	@echo "make pull-models  Descarga los modelos de config.yaml en Ollama (requiere internet, una vez)"
 	@echo "make voz-modelos  Descarga Whisper y Kokoro a ./modelos (requiere internet, una vez; FASTER=1 agrega faster-whisper)"
 	@echo "make voces        Genera muestras de cada voz en salida/voces/ para escucharlas y elegir"
@@ -61,6 +62,9 @@ test:
 
 pull-models:
 	./scripts/pull_models.sh
+
+modelos:
+	$(if $(RAM_GB),CENTINELA_RAM_GB=$(RAM_GB),) $(PY) -m comun.modelos
 
 ui-sim:
 	$(OFFLINE) $(PY) -m scripts.simulador_ui

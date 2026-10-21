@@ -284,6 +284,54 @@ table.campos td:last-child { font-weight: 600; font-size: 1rem; }
 .etapa .ms { text-align: right; font-variant-numeric: tabular-nums; }
 .chips-modelos { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .5rem; }
 
+/* ───── Selector de modelos y alerta de RAM ───── */
+.boton-pildora { cursor: pointer; color: var(--texto); }
+.boton-pildora:hover { border-color: var(--acento); }
+.aviso-ram {
+  display: flex; align-items: center; gap: 1rem; padding: .5rem 1.2rem;
+  background: var(--rojo-fondo); color: var(--rojo); border-bottom: 1px solid var(--rojo); font-weight: 600;
+}
+.aviso-ram[data-nivel="justo"] { background: var(--ambar-fondo); color: var(--ambar); border-color: var(--ambar); }
+.aviso-ram span { flex: 1; }
+.dialogo {
+  width: min(46rem, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); overflow-y: auto;
+  background: var(--zona); color: var(--texto); border: 1px solid var(--borde); border-radius: var(--radio);
+  padding: 1rem 1.2rem;
+}
+.dialogo::backdrop { background: rgba(0, 0, 0, .6); }
+.dm-cabeza { display: flex; justify-content: space-between; align-items: center; }
+.dm-cabeza h2 { margin: 0; font-size: 1.2rem; }
+.dm-campo { display: grid; grid-template-columns: 7rem 1fr; align-items: center; gap: .6rem; margin-top: .6rem; }
+.dm-campo span { color: var(--tenue); font-size: .85rem; }
+.dm-campo select {
+  font: inherit; font-size: .85rem; color: var(--texto); background: var(--tarjeta-2);
+  border: 1px solid var(--borde); border-radius: 8px; padding: .35rem .5rem; min-width: 0;
+}
+.dm-campo .gb { grid-column: 2; font-size: .75rem; color: var(--tenue); margin-top: -.4rem; }
+.dm-roles { margin-top: .4rem; }
+.dm-alerta { margin-top: .9rem; padding: .7rem .8rem; border-radius: 12px; border: 2px solid var(--verde); background: var(--verde-fondo); }
+.dm-alerta[data-nivel="justo"] { border-color: var(--ambar); background: var(--ambar-fondo); }
+.dm-alerta[data-nivel="excede"] { border-color: var(--rojo); background: var(--rojo-fondo); }
+.dm-mensaje { margin: .5rem 0 0; font-weight: 700; }
+.dm-alerta[data-nivel="ok"] .dm-mensaje { color: var(--verde); }
+.dm-alerta[data-nivel="justo"] .dm-mensaje { color: var(--ambar); }
+.dm-alerta[data-nivel="excede"] .dm-mensaje { color: var(--rojo); }
+.dm-avisos { margin: .4rem 0 0; padding-left: 1.1rem; font-size: .8rem; color: var(--ambar); }
+.dm-barra { position: relative; display: flex; height: 1.1rem; background: var(--fondo); border-radius: 6px; overflow: hidden; }
+.dm-barra .seg { height: 100%; border-right: 1px solid var(--fondo); }
+.dm-alerta .seg[data-rol="agente"] { background: var(--r-agente); }
+.dm-alerta .seg[data-rol="rapido"] { background: var(--r-rapido); }
+.dm-alerta .seg[data-rol="vision"] { background: var(--r-vision); }
+.dm-alerta .seg[data-rol="embeddings"] { background: var(--r-embeddings); }
+.dm-alerta .seg[data-rol="stt"] { background: var(--r-stt); }
+.dm-alerta .seg[data-rol="tts"] { background: var(--r-tts); }
+.dm-alerta .seg[data-rol="sistema"] { background: var(--tenue); }
+.dm-barra .tope { position: absolute; top: 0; bottom: 0; width: 3px; z-index: 1; background: var(--texto); box-shadow: 0 0 0 1px var(--fondo); }
+.dm-leyenda i.tope-ley { width: 3px; background: var(--texto); }
+.dm-leyenda { display: flex; flex-wrap: wrap; gap: .3rem .8rem; margin-top: .35rem; font-size: .72rem; color: var(--tenue); }
+.dm-leyenda i { display: inline-block; width: .6rem; height: .6rem; border-radius: 2px; margin-right: .25rem; }
+.dm-acciones { display: flex; justify-content: flex-end; gap: .6rem; margin-top: .9rem; }
+
 /* Pantallas más chicas (ensayo en laptop): la columna del panel baja. */
 @media (max-width: 1200px) {
   body { overflow: auto; }

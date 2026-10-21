@@ -49,6 +49,16 @@ app.include_router(crear_router(cfg))
   (precio de lista de Claude Opus 5.5, ver DECISIONES.md §7). Sin precios, el panel lo dice y no inventa cifras. Siempre rotulado
   «estimación referencial», junto a «Costo marginal local: Q0.00».
 
+## Selector de modelos y alerta de RAM
+
+La píldora **⚙ Modelos** de la barra muestra la memoria estimada de la selección frente a la RAM del equipo:
+verde si cabe, ámbar si va justa (≥ 90 %) y roja si se pasa; en ámbar o rojo aparece además una franja de
+alerta bajo la barra. Al hacer clic se abre el diálogo: perfil (`48gb`, `24gb` o personalizado), un modelo por
+rol (los del catálogo y los ya descargados en Ollama) y una barra apilada con cada modelo, la reserva del
+sistema y la marca de la RAM total, que se recalcula en cada cambio (`POST /api/modelos/estimar`). «Aplicar»
+(`POST /api/modelos`) pide confirmación si la selección no cabe. Lógica en `comun/modelos.py` y
+`orchestrator/modelos_api.py`; decisiones en DECISIONES.md §8.
+
 ## Simulador para ensayar la UI sin modelos
 
 ```bash
