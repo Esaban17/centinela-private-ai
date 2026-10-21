@@ -167,3 +167,35 @@ el **precio de lista público de Claude Opus 5.5: US$4 por millón de tokens de 
 4. **Ejemplo:** una sesión con 60 000 tokens de entrada y 3 000 de salida da US$0.30 (≈ Q2.31) frente a
    «Costo marginal local: Q0.00».
 5. Los precios de las API cambian; antes del evento conviene revisar la página de precios y actualizar la fecha aquí.
+
+## 8. Selección de modelos por RAM y perfil de 24 GB (2026-10-21)
+
+Pedido: que Centinela corra en una Mac de 24 GB y que se puedan elegir los modelos, con una alerta si la
+combinación no cabe en la RAM del equipo donde corre.
+
+- **Perfiles en `config.yaml → seleccion_modelos`.** `perfil: auto` elige el perfil más grande cuya
+  `ram_minima_gb` cabe en la RAM real (psutil): 40 GB o más → `48gb` (la sección `modelos` de siempre), menos →
+  `24gb`. También se puede fijar `48gb`, `24gb` o `manual`. El perfil se aplica dentro de `config.cargar()`, así
+  orquestador, servidor MCP, `make pull-models` y `make warmup` usan los mismos modelos.
+- **Perfil `24gb`:** agente `gemma4:12b-it-qat` (7.2 GB de descarga, *tools* y *vision*) que **también hace la
+  visión**, más `qwen3:4b-instruct-2507` (rápido) y `bge-m3` (el mismo índice de políticas que en 48 GB).
+  Agente y visión usan el mismo `num_ctx` (16K) para que Ollama no recargue el modelo al pasar de una tarea a
+  otra. Estimado ≈ 13.7 GB de modelos + 6 GB de sistema ≈ 19.7 GB de 24 GB. Se descartó `gemma4:26b-a4b-it-qat`
+  (16 GB) como agente: con Whisper en la GPU pasa del ~16 GB que macOS deja a la GPU en 24 GB y no queda aire
+  para el navegador. **Las cifras del 12B son estimadas: hay que medir en la Mac de 24 GB** con
+  `make warmup` (`ollama ps`) y `make ensayo` (calidad del tool calling en español).
+- **Estimación (`comun/modelos.py`).** Catálogo en `config.yaml` con la memoria de cada modelo ya cargado:
+  `medido` (de `ollama ps`, GUION.md §6) o `estimado` (descarga + caché KV q8_0). Un modelo que se comparte
+  entre roles se cuenta una vez; uno fuera del catálogo se estima con su tamaño en `/api/tags`. Se suman
+  Whisper y Kokoro (corren en el orquestador) y una reserva de 6 GB para macOS, navegador y Python. Nivel:
+  `ok`, `justo` (≥ 90 % de la RAM) o `excede` (> 100 %). Aparte avisa si lo que va a la GPU (Ollama + Whisper
+  MLX) pasa el límite de GPU de macOS (2/3 de la RAM hasta 36 GB, 3/4 arriba, o `iogpu.wired_limit_mb`).
+- **Dónde salta la alerta:** píldora «⚙ Modelos» y franja roja/ámbar en la UI, log del orquestador al arrancar,
+  `make modelos` (sale con código 1 si no cabe) y la fase «RAM del equipo» de `make warmup`, que además ajusta el
+  presupuesto de `ollama ps` a lo que deja libre este equipo.
+- **Selector en la UI** (`POST /api/modelos`): agente, rápido y visión cambian en caliente (se descargan de
+  Ollama los que quedan sin uso y se precargan los nuevos). Embeddings y voz rigen al reiniciar: el servidor MCP
+  tiene su propio proceso y el índice se armó con el modelo anterior (`make ingest`). Rechaza modelos `:cloud`,
+  modelos no descargados (no hay red para bajarlos) y, sin confirmación explícita, una selección que no cabe. La
+  elección se guarda en `config.local.yaml` (no se versiona; se borra para volver a `config.yaml`).
+- `CENTINELA_RAM_GB=24` (o `make modelos RAM_GB=24`) simula otra máquina para ensayar desde la Mac de 48 GB.

@@ -1,14 +1,20 @@
 """Fixtures: base sembrada en un directorio temporal y servidor MCP en memoria."""
 
 import copy
+import os
 import shutil
 from datetime import date
 from pathlib import Path
 
 import pytest
 
-from comun import config
-from scripts.seed import generar
+# Pruebas deterministas en cualquier equipo: perfil de 48 GB (el de los nombres que esperan las pruebas)
+# y sin el config.local.yaml que escribe la UI.
+os.environ.setdefault("CENTINELA__seleccion_modelos__perfil", "48gb")
+os.environ.setdefault("CENTINELA_CONFIG_LOCAL", "")
+
+from comun import config  # noqa: E402
+from scripts.seed import generar  # noqa: E402
 
 FECHA_REF = date(2026, 11, 20)
 

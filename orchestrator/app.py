@@ -17,7 +17,9 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from comun import config
+from comun import modelos as sel_modelos
 from orchestrator import ganchos as mod_ganchos
+from orchestrator import modelos_api
 from orchestrator.mcp_host import HostMCP, MCPNoDisponible, parametros_stdio
 from orchestrator.ollama import Ollama
 from orchestrator.orquestador import Orquestador, TurnoEnCurso
@@ -49,10 +51,21 @@ def crear_orquestador(cfg: dict[str, Any] | None = None) -> Orquestador:
     return Orquestador(cfg, ollama, host, mod_ganchos.cargar(cfg, ollama))
 
 
+def _avisar_memoria(cfg: dict[str, Any]) -> None:
+    """Al arrancar: el log dice qué perfil quedó y si la selección cabe en la RAM de este equipo."""
+    r = (cfg.get("seleccion_modelos") or {}).get("resuelto") or {}
+    est = sel_modelos.estimar(cfg["modelos"], cfg, r.get("ram_gb"))
+    nivel = logging.WARNING if est["nivel"] != "ok" or est["avisos"] else logging.INFO
+    log.log(nivel, "modelos · perfil %s (%s) · %s", r.get("perfil", "manual"), r.get("motivo", ""), est["mensaje"])
+    for aviso in est["avisos"]:
+        log.warning("modelos · %s", aviso)
+
+
 def crear_app(orq: Orquestador | None = None) -> FastAPI:
     @asynccontextmanager
     async def ciclo(app: FastAPI):
         o = app.state.orq = orq or crear_orquestador()
+        _avisar_memoria(o.cfg)
         try:
             await o.host.conectar()
         except MCPNoDisponible as e:  # la API arranca igual; /api/salud lo muestra y se reintenta en el turno
@@ -264,6 +277,21 @@ def crear_app(orq: Orquestador | None = None) -> FastAPI:
         log.info("panel de soberanía: módulo aún no integrado")
     else:
         app.include_router(crear_router(orq.cfg if orq is not None else config.cargar()))
+
+    # ───────────── Selección de modelos y alerta de RAM ─────────────
+
+    def _ocupado() -> bool:
+        orq_ = getattr(app.state, "orq", None)
+        return orq_ is not None and any(s.ocupada for s in orq_.sesiones.values())
+
+    def _anunciar() -> None:
+        """Los chips y el panel de cada sesión abierta toman los modelos nuevos."""
+        orq_ = getattr(app.state, "orq", None)
+        if orq_ is not None:
+            for s in orq_.sesiones.values():
+                s.bus.emitir("sesion.lista", orq_.datos_sesion_lista())
+
+    app.include_router(modelos_api.crear_router(orq.cfg if orq is not None else config.cargar(), _ocupado, _anunciar))
 
     # ───────────── UI (Fase 5) ─────────────
 

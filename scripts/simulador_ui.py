@@ -35,6 +35,7 @@ from mcp.client.client import Client
 from comun import config
 from comun.config import RAIZ
 from mcp_server.server import crear_servidor
+from orchestrator import modelos_api
 from orchestrator.soberania import crear_router
 
 CFG = config.cargar()
@@ -477,6 +478,7 @@ async def ciclo(_app: FastAPI):
 
 app = FastAPI(title="Centinela · simulador de UI (DEMO / DATOS FICTICIOS)", lifespan=ciclo)
 app.include_router(crear_router(CFG))
+app.include_router(modelos_api.crear_router(CFG))  # el selector de modelos funciona igual (sin turnos reales)
 
 
 def iniciar(s: Sesion, entrada: str, texto: str, documento_id: str | None, turno_id: str | None = None) -> str | None:

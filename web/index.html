@@ -24,8 +24,13 @@
       <span class="pildora" id="estado-ws" data-estado="conectando">Conectando…</span>
       <span class="pildora" id="estado-red" data-estado="desconocido">Red: …</span>
       <span class="pildora grande" id="estado-salientes" data-estado="desconocido">Conexiones externas: …</span>
+      <button type="button" class="pildora boton-pildora" id="estado-ram" data-estado="desconocido" title="Elegir los modelos y ver si caben en la RAM">⚙ Modelos</button>
     </div>
   </header>
+  <div class="aviso-ram oculto" id="aviso-ram" role="alert">
+    <span id="aviso-ram-texto"></span>
+    <button type="button" class="boton-secundario" id="aviso-ram-boton">Elegir modelos</button>
+  </div>
 
   <main class="zonas">
     <!-- 1. Conversación -->
@@ -128,6 +133,28 @@
   </main>
 
   <div class="grabando oculto" id="grabando" role="status">● Escuchando… suelte para enviar</div>
+
+  <!-- Selector de modelos: perfil por RAM, un modelo por rol y la alerta si no caben (GET/POST /api/modelos). -->
+  <dialog class="dialogo" id="dialogo-modelos" aria-labelledby="dm-titulo">
+    <div class="dm-cabeza">
+      <h2 id="dm-titulo">Modelos de Centinela</h2>
+      <button type="button" class="boton-icono" id="dm-cerrar" aria-label="Cerrar">✕</button>
+    </div>
+    <p class="detalle" id="dm-equipo">Consultando…</p>
+    <label class="dm-campo"><span>Perfil</span><select id="dm-perfil"></select></label>
+    <p class="detalle" id="dm-perfil-desc"></p>
+    <div class="dm-roles" id="dm-roles"></div>
+    <div class="dm-alerta" id="dm-alerta" data-nivel="ok">
+      <div class="dm-barra" id="dm-barra" aria-hidden="true"></div>
+      <p class="dm-mensaje" id="dm-mensaje"></p>
+      <ul class="dm-avisos" id="dm-avisos"></ul>
+    </div>
+    <p class="detalle" id="dm-resultado"></p>
+    <div class="dm-acciones">
+      <button type="button" class="boton-secundario" id="dm-cancelar">Cerrar</button>
+      <button type="button" class="boton-primario" id="dm-aplicar">Aplicar</button>
+    </div>
+  </dialog>
 
   <script type="module" src="js/app.js"></script>
 </body>

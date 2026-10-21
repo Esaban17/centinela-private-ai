@@ -10,9 +10,15 @@ Las decisiones de modelos, el presupuesto de memoria y los ajustes a la arquitec
 [docs/DECISIONES.md](docs/DECISIONES.md). El guion del escenario, el plan B y el video de respaldo, en
 [GUION.md](GUION.md).
 
-## Instalación desde cero (Mac Apple Silicon, 48 GB o más)
+## Instalación desde cero (Mac Apple Silicon, 24 GB o más)
 
-Requiere internet **una sola vez** (Homebrew, Python, ~35 GB de modelos). Después todo corre sin red.
+Requiere internet **una sola vez** (Homebrew, Python, los modelos). Después todo corre sin red.
+
+Los modelos se eligen solos según la RAM del equipo (`seleccion_modelos.perfil: auto` en `config.yaml`): con
+40 GB o más, el perfil `48gb` (~30 GB de modelos); con menos, el perfil `24gb` (~14 GB, el agente también lee
+los documentos). `make modelos` muestra qué perfil quedó y si cabe; `make modelos RAM_GB=24` simula otra Mac.
+Desde la UI, el botón **⚙ Modelos** permite elegir otro perfil o un modelo por rol, y avisa antes de aplicar si
+la combinación no cabe en la RAM. Detalle en [DECISIONES.md §8](docs/DECISIONES.md).
 
 ```bash
 git clone https://github.com/Esaban17/centinela-private-ai.git && cd centinela-private-ai
@@ -37,11 +43,12 @@ make logs                    # terminal secundaria: qué está pasando por dentr
 | Comando | Qué hace |
 |---|---|
 | `make demo` | Prepara lo que falte (base, índice, documentos), levanta `ollama serve` en segundo plano si no responde, abre la UI y deja el orquestador en primer plano. Whisper y Kokoro se cargan al arrancar. |
-| `make warmup` | Revisa archivos y modelos (ninguno `:cloud`), carga los 4 modelos de Ollama con `keep_alive=-1` y las mismas opciones que la demo, corre el guion una vez sobre una copia de la base, precalienta la voz en el orquestador y verifica con `ollama ps` que todo siga en memoria, en GPU y dentro de 35 GB. `SIN_GUION=1` lo acorta. |
+| `make warmup` | Revisa archivos y modelos (ninguno `:cloud`), carga los 4 modelos de Ollama con `keep_alive=-1` y las mismas opciones que la demo, corre el guion una vez sobre una copia de la base, precalienta la voz en el orquestador y verifica con `ollama ps` que todo siga en memoria, en GPU y dentro del presupuesto (35 GB o lo que deje libre la RAM del equipo, lo que sea menor). `SIN_GUION=1` lo acorta. |
 | `make ensayo` | Corre el guion 10 veces (`CORRIDAS=n`) y revisa los criterios de aceptación: ≥ 90 % de éxito por pregunta, p50/p95, 0 conexiones salientes y auditoría completa. `VOZ=1` entra por voz (TTS → STT) y mide el primer audio. Reporte en `salida/ensayos/`. |
 | `make check-offline` | Config solo en loopback, variables offline, UI sin assets externos, Ollama como servicio y escuchando solo en 127.0.0.1, red del equipo y el guion completo con el monitor y la guardia de salida encendidos. `ESTRICTO=1` exige el Wi-Fi apagado. |
 | `make ollama` | `ollama serve` con las variables de `config.yaml → ollama.servidor` (127.0.0.1, 4 modelos a la vez, sin vencimiento, caché KV q8_0). |
 | `make reset` | Base y documentos demo como nuevos (borra los tickets de los ensayos). Con `make demo` apagado. |
+| `make modelos` | Perfil de modelos elegido, memoria de cada uno y alerta si no caben en la RAM de este equipo (`RAM_GB=24` simula otra Mac). |
 | `make medir` | Compara modelos agente con el mismo ensayo (`MODELOS="a b" CORRIDAS=5`). |
 
 **Guardia de salida.** Además del monitor del panel, el orquestador, el servidor MCP y los scripts instalan un
