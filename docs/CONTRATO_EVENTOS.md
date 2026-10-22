@@ -1,10 +1,12 @@
 # Contrato de eventos: orquestador ↔ UI (y puntos de enganche)
 
-Versión del contrato: **1** (revisión 1.1, solo agregados). Dueño: Fase 2 (orquestador). Un cambio incompatible sube
+Versión del contrato: **1** (revisión 1.2, solo agregados). Dueño: Fase 2 (orquestador). Un cambio incompatible sube
 la versión y se avisa a las fases 3, 4 y 5.
 
 Revisión 1.1: mensaje `preferencias`, evento `pong`, código `documento_ilegible`, voz en modo
 `primeras_oraciones` (locutor de la Fase 4) y `ollama.chat` acepta imágenes en bytes y `opciones`.
+
+Revisión 1.2: `sesion.acumulado` trae `datos_sensibles` («Lo que no salió» del Panel de Soberanía).
 
 Todo es local: el orquestador escucha en `127.0.0.1:<orquestador.puerto>` (8765 por defecto). La UI se sirve
 desde el mismo origen (`web/`), así que no hace falta CORS ni nada externo.
@@ -54,7 +56,24 @@ desde el mismo origen (`web/`), así que no hace falta CORS ni nada externo.
 | tipo | datos |
 |---|---|
 | `sesion.lista` | `banco`, `marca_demo`, `modelos` (`{rol: nombre}`), `herramientas` (`[{nombre, titulo, descripcion, escritura}]`), `voz_disponible` (bool), `vision_disponible` (bool), `version_contrato` |
-| `sesion.acumulado` | `turnos`, `tokens_entrada`, `tokens_salida`, `herramientas_ejecutadas`, `documentos_analizados`, `aprobaciones` (`{aprobadas, rechazadas}`), `modelos_usados` (lista de nombres distintos). Se emite al cerrar cada turno. |
+| `sesion.acumulado` | `turnos`, `tokens_entrada`, `tokens_salida`, `herramientas_ejecutadas`, `documentos_analizados`, `aprobaciones` (`{aprobadas, rechazadas}`), `modelos_usados` (lista de nombres distintos), `datos_sensibles` (ver abajo). Se emite al cerrar cada turno. |
+
+`datos_sensibles` de `sesion.acumulado` (orchestrator/soberania/sensibles.py): los datos sensibles **distintos** que
+la sesión procesó en el equipo, clasificados con los niveles de la política de uso de IA (§2). Se cuentan los
+resultados de herramientas MCP, los documentos leídos y las grabaciones de voz; solo se guardan huellas para
+deduplicar, nunca los valores.
+
+```json
+{"total": 37, "fuente": "Política de uso de IA y clasificación de datos, §2",
+ "niveles": [{"nivel": "restringido", "etiqueta": "Restringido", "total": 30,
+              "categorias": [{"id": "cuentas", "etiqueta": "cuentas y tarjetas", "cantidad": 4}]},
+             {"nivel": "confidencial", "etiqueta": "Confidencial", "total": 3, "categorias": []},
+             {"nivel": "interno", "etiqueta": "Interno", "total": 4, "categorias": []}]}
+```
+
+`nivel` siempre es `restringido`, `confidencial` o `interno`, en ese orden. Categorías: `clientes`, `nombres`,
+`cuentas`, `montos`, `movimientos`, `casos`, `documentos`, `voz` (restringido); `reglas` (confidencial);
+`politicas` (interno). Solo aparecen las que tienen `cantidad` > 0; `etiqueta` ya viene en singular o plural.
 
 ### Turno
 

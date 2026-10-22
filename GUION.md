@@ -92,7 +92,7 @@ Tiempos orientativos. «Tecla» es el atajo del guion si la voz falla; el texto 
 
 | | |
 |---|---|
-| **Señalo** | **0 conexiones externas** en toda la sesión · tokens procesados · **costo equivalente (estimación referencial) vs. Costo marginal local: Q0.00** · modelos distintos que colaboraron (agente, rápido, visión, embeddings, Whisper, Kokoro) · herramientas ejecutadas y auditadas. |
+| **Señalo** | **0 conexiones externas** en toda la sesión · **Datos sensibles que no salieron del equipo**: el total y sus niveles (restringido, confidencial, interno), «con IA en la nube, todo esto habría salido del banco, y nuestra propia política lo prohíbe» · tokens procesados · **costo equivalente (estimación referencial) vs. Costo marginal local: Q0.00** · modelos distintos que colaboraron (agente, rápido, visión, embeddings, Whisper, Kokoro) · herramientas ejecutadas y auditadas. |
 | **Diapositiva final** | De la laptop al clúster (tabla abajo). |
 
 | Hoy, en esta laptop | En producción on-prem |

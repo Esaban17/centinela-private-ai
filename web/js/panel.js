@@ -1,6 +1,7 @@
 // Zona 3: Panel de Soberanía.
 // - Conexiones salientes, red, modelos cargados, memoria y costo: GET /api/soberania (cada `intervalo` ms).
 // - Métricas del turno y acumulado: eventos `turno.fin` y `sesion.acumulado` del orquestador.
+// - «Lo que no salió»: `sesion.acumulado.datos_sensibles`, clasificado por el orquestador (soberania/sensibles.py).
 import { el, dinero, ms, num, ETAPAS, ROLES } from './util.js';
 
 const $ = (id) => document.getElementById(id);
@@ -128,7 +129,23 @@ export class Panel {
     const rolDe = Object.fromEntries(Object.entries(this.modelosPorRol).map(([rol, nombre]) => [nombre, rol]));
     $('a-lista-modelos').replaceChildren(...usados.map((m) => el('span', { class: 'chip', dataset: { rol: rolDe[m] || '' }, title: m },
       rolDe[m] ? el('b', {}, `${ROLES[rolDe[m]]} · `) : null, m)));
+    this.sensibles(a.datos_sensibles);
     this._sondear();
+  }
+
+  sensibles(d) {
+    const total = d?.total || 0;
+    $('tarjeta-sensibles').dataset.estado = total ? 'con-datos' : 'vacio';
+    $('sens-total').textContent = num(total);
+    $('sens-detalle').textContent = total
+      ? 'datos distintos, clasificados según la política de uso de IA (§2). Con IA en la nube habrían salido del banco.'
+      : 'Aún no se procesan datos de clientes en esta sesión.';
+    $('sens-detalle').title = d?.fuente || '';
+    $('sens-niveles').replaceChildren(...(d?.niveles || []).filter((n) => n.total).map((n) =>
+      el('div', { class: 'sens-nivel', dataset: { nivel: n.nivel } },
+        el('span', { class: 'nivel' }, n.etiqueta),
+        el('div', { class: 'chips' }, ...n.categorias.map((c) =>
+          el('span', { class: 'chip' }, el('b', {}, num(c.cantidad)), ` ${c.etiqueta}`))))));
   }
 }
 

@@ -20,6 +20,7 @@ from orchestrator.ganchos import Ganchos, disponible
 from orchestrator.mcp_host import HostMCP
 from orchestrator.memoria import Memoria
 from orchestrator.ollama import Ollama
+from orchestrator.soberania.sensibles import Inventario
 
 log = logging.getLogger("centinela.orquestador")
 
@@ -43,6 +44,7 @@ class Sesion:
         self.acumulado: dict[str, Any] = {"turnos": 0, "tokens_entrada": 0, "tokens_salida": 0,
                                           "herramientas_ejecutadas": 0, "documentos_analizados": 0,
                                           "aprobaciones": {"aprobadas": 0, "rechazadas": 0}, "modelos_usados": []}
+        self.sensibles = Inventario()   # «Lo que no salió» del Panel de Soberanía
 
     @property
     def ocupada(self) -> bool:

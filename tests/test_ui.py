@@ -68,6 +68,8 @@ def test_simulador_contrato_y_aprobacion(simulador):
         seqs = [e["seq"] for e in ev]
         assert seqs == sorted(seqs)
         fin = next(e for e in ev if e["tipo"] == "herramienta.fin" and e["datos"]["nombre"] == "detectar_anomalias")
+        sensibles = ev[-1]["datos"]["datos_sensibles"]
+        assert sensibles["total"] > 0 and sensibles["niveles"][0]["nivel"] == "restringido"
         assert fin["datos"]["resultado"]["total_hallazgos"] >= 3   # resultado real del servidor MCP
 
         ev = _turno(ws, {"tipo": "mensaje", "texto": "Abra un ticket para fraude"}, aprobar=False)

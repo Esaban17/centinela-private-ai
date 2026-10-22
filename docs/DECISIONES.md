@@ -199,3 +199,21 @@ combinación no cabe en la RAM del equipo donde corre.
   modelos no descargados (no hay red para bajarlos) y, sin confirmación explícita, una selección que no cabe. La
   elección se guarda en `config.local.yaml` (no se versiona; se borra para volver a `config.yaml`).
 - `CENTINELA_RAM_GB=24` (o `make modelos RAM_GB=24`) simula otra máquina para ensayar desde la Mac de 48 GB.
+
+## 9. «Lo que no salió»: datos sensibles clasificados (2026-10-22)
+
+- **Qué muestra.** La tarjeta «Datos sensibles que no salieron del equipo» del panel cuenta los datos sensibles
+  **distintos** que procesó la sesión y los agrupa con los niveles de la política de uso de IA del banco
+  (`data/politicas/politica_uso_ia_clasificacion_datos.md` §2): restringido (clientes, nombres, cuentas, saldos y
+  montos, movimientos, casos de fraude y tickets, documentos escaneados, grabaciones de voz), confidencial (reglas
+  antifraude) e interno (secciones de manuales). Es el argumento de la §3 de esa política hecho cifra: con un
+  servicio de IA en la nube, todo eso habría salido del banco.
+- **Cómo se cuenta** (`orchestrator/soberania/sensibles.py`). Se clasifican los argumentos y resultados de cada
+  herramienta MCP, los campos de cada documento leído y cada grabación transcrita. Reconoce los datos por forma
+  (`CLI-0000`, `AT-00000-00`) y por nombre de campo (`titular`, `saldo`, `monto`…), no con un modelo: así la cifra es
+  determinista y se puede explicar. Deduplica con huellas SHA-256 truncadas; no guarda los valores.
+- **Viaja en `sesion.acumulado.datos_sensibles`** (contrato rev. 1.2, solo un agregado). «Nueva sesión» la pone en
+  cero porque la UI estrena sesión.
+- **Límite conocido:** no cuenta lo que la persona escribe o dice en la pregunta (solo que hubo una grabación); el
+  nombre de la clienta del acto 1 se cuenta igual porque `buscar_cliente` lo devuelve.
+
