@@ -56,7 +56,7 @@ modelos:
     nombre_faster: "large-v3-turbo"       # motor faster-whisper (Linux / pruebas; «small» o «base» para ir rápido)
     idioma: "es"                          # forzado: Whisper no detecta idioma
     # Vocabulario que Whisper debe reconocer (nombres propios y siglas del guion).
-    prompt_inicial: "Centinela, Banco Atitlán. Lucía Fernanda Cojtí Barrios, KYC, NOC, VKS, NSX, vCenter, ESXi, quetzales."
+    prompt_inicial: "Centinela, Banco Atitlán. Lucía Fernanda Cojtí Barrios, KYC, quetzales."
   tts:
     motor: "kokoro"                       # kokoro | say
     respaldo: "say"                       # say | ninguno. Automático si Kokoro falla o tarda más de voz.timeout_tts_s
@@ -165,7 +165,7 @@ orquestador:
     titulo_ticket_rapido: true   # el modelo rápido titula los tickets antes de pedir aprobación
     resumen_hablado: true        # el modelo rápido resume la respuesta para la voz (si voz.modo_habla = resumen)
 
-# Preguntas del guion: botones de atajo en la UI (teclas 1-6) y base de warmup, ensayo y medir (scripts/guion.py).
+# Preguntas del guion: botones de atajo en la UI (teclas 1-5) y base de warmup, ensayo y medir (scripts/guion.py).
 # Se corren en orden en una misma sesión (las preguntas 2-4 dependen de la 1). Ver GUION.md.
 guion:
   - id: cartera
@@ -185,10 +185,6 @@ guion:
     documento_id: "demo-boleta_deposito_discrepancia.png"
     herramientas_esperadas: [validar_documento]
     respuesta_contiene: ["titular"]
-  - id: noc
-    pregunta: "¿Hay alertas críticas en la infraestructura?"
-    herramientas_esperadas: [alertas_infraestructura]
-    respuesta_contiene: ["VKS", "NSX"]
 
 # `make ensayo`: criterios de aceptación del prompt (§11). El reporte queda en salida/ensayos/.
 ensayo:

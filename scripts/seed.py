@@ -64,7 +64,7 @@ CREATE INDEX ix_trx_cuenta_fecha ON transacciones(cuenta_id, fecha_hora);
 
 CREATE TABLE tickets (
     id          INTEGER PRIMARY KEY,
-    tipo        TEXT NOT NULL CHECK (tipo IN ('fraude','servicio','infraestructura')),
+    tipo        TEXT NOT NULL CHECK (tipo IN ('fraude','servicio')),
     prioridad   TEXT NOT NULL CHECK (prioridad IN ('baja','media','alta','critica')),
     estado      TEXT NOT NULL CHECK (estado IN ('abierto','en_progreso','resuelto','cerrado')),
     titulo      TEXT NOT NULL,
@@ -81,15 +81,6 @@ CREATE TABLE tickets_notas (
     autor      TEXT NOT NULL,
     estado     TEXT NOT NULL,
     nota       TEXT NOT NULL
-);
-
-CREATE TABLE alertas_infra (
-    id          INTEGER PRIMARY KEY,
-    fecha       TEXT NOT NULL,
-    severidad   TEXT NOT NULL CHECK (severidad IN ('info','advertencia','critica')),
-    componente  TEXT NOT NULL CHECK (componente IN ('vCenter','host ESXi','NSX Edge','clúster VKS','almacenamiento')),
-    mensaje     TEXT NOT NULL,
-    estado      TEXT NOT NULL CHECK (estado IN ('abierta','reconocida','resuelta'))
 );
 
 CREATE TABLE auditoria (
@@ -145,7 +136,7 @@ DICCIONARIO: dict[str, dict[str, str]] = {
     },
     "tickets": {
         "id": "Número de ticket",
-        "tipo": "fraude | servicio | infraestructura",
+        "tipo": "fraude | servicio",
         "prioridad": "baja | media | alta | critica",
         "estado": "abierto | en_progreso | resuelto | cerrado",
         "titulo": "Título corto",
@@ -161,14 +152,6 @@ DICCIONARIO: dict[str, dict[str, str]] = {
         "autor": "Quién la registró",
         "estado": "Estado del ticket después de la nota",
         "nota": "Texto de la nota",
-    },
-    "alertas_infra": {
-        "id": "Identificador de la alerta del NOC",
-        "fecha": "Fecha y hora de la alerta",
-        "severidad": "info | advertencia | critica",
-        "componente": "vCenter | host ESXi | NSX Edge | clúster VKS | almacenamiento",
-        "mensaje": "Detalle técnico",
-        "estado": "abierta | reconocida | resuelta",
     },
     "auditoria": {
         "id": "Identificador del registro",
@@ -457,12 +440,6 @@ def generar(db_path: Path, fecha_ref: date, semilla: int, n_clientes: int, n_trx
          "Cliente corporativo sin acceso desde hace 2 días.", rng.choice(clientes)["id"], "ejecutivo.giron", 2),
         ("servicio", "baja", "resuelto", "Constancia de saldo",
          "Emisión de constancia para trámite migratorio.", rng.choice(clientes)["id"], "agencia.zona10", 12),
-        ("infraestructura", "media", "en_progreso", "Renovar certificados de vCenter",
-         "Certificados de máquina vencen en 21 días.", None, "noc.turno.b", 4),
-        ("infraestructura", "baja", "abierto", "Capacidad de datastore vsan-prod",
-         "Uso sostenido por encima del 80 %; planificar expansión.", None, "noc.turno.a", 9),
-        ("infraestructura", "alta", "resuelto", "Host ESXi esx-07 con memoria degradada",
-         "DIMM reemplazado; host de vuelta en el clúster.", None, "noc.turno.c", 15),
         ("servicio", "media", "abierto", "Solicitud de aumento de límite ACH",
          "Pyme solicita subir límite diario de transferencias.", rng.choice(clientes)["id"], "app.formulario", 1),
     ]
@@ -471,40 +448,9 @@ def generar(db_path: Path, fecha_ref: date, semilla: int, n_clientes: int, n_trx
         [(t, p, e, ti, de, cl, cr, _fmt(ahora - timedelta(days=d, hours=rng.randrange(1, 8))))
          for t, p, e, ti, de, cl, cr, d in tickets])
 
-    # Alertas de infraestructura: ruido de 7 días + 2 críticas abiertas recientes.
-    ruido = [
-        ("info", "vCenter", "Respaldo de configuración de vCenter completado."),
-        ("info", "host ESXi", "Host {h} salió de modo mantenimiento."),
-        ("advertencia", "host ESXi", "Host {h}: uso de CPU por encima de 85 % durante 15 minutos."),
-        ("advertencia", "almacenamiento", "Latencia de escritura en vsan-prod por encima de 20 ms."),
-        ("info", "clúster VKS", "Clúster vks-dev-01 escalado a 5 nodos de trabajo."),
-        ("advertencia", "NSX Edge", "Edge {e}: uso de CPU del datapath por encima de 70 %."),
-        ("info", "NSX Edge", "Sesión BGP restablecida en {e}."),
-        ("advertencia", "vCenter", "Servicio vpxd reiniciado automáticamente."),
-    ]
-    alertas = []
-    for _ in range(38):
-        sev, comp, msg = rng.choice(ruido)
-        dt = ahora - timedelta(hours=rng.uniform(6, 24 * 7))
-        msg = msg.format(h=f"esx-{rng.randint(1, 12):02d}", e=f"edge-0{rng.randint(1, 4)}")
-        alertas.append((_fmt(dt), sev, comp, msg, rng.choice(["resuelta", "resuelta", "reconocida"])))
-    alertas += [
-        (_fmt(ahora - timedelta(hours=1, minutes=40)), "critica", "clúster VKS",
-         "Clúster vks-prod-01: 2 de 3 nodos del plano de control en NotReady; etcd sin quórum. "
-         "Servicios de banca en línea degradados.", "abierta"),
-        (_fmt(ahora - timedelta(hours=3, minutes=5)), "critica", "NSX Edge",
-         "Edge edge-02 (clúster edge-cl-01): failover de HA; sesiones BGP con ToR caídas en uplink-2.",
-         "abierta"),
-        (_fmt(ahora - timedelta(hours=5, minutes=20)), "advertencia", "almacenamiento",
-         "Datastore vsan-prod al 86 % de capacidad.", "abierta"),
-    ]
-    alertas.sort()
-    con.executemany("INSERT INTO alertas_infra (fecha,severidad,componente,mensaje,estado) VALUES (?,?,?,?,?)",
-                    alertas)
-
     con.commit()
     resumen = {t: con.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
-               for t in ["clientes", "cuentas", "transacciones", "tickets", "alertas_infra"]}
+               for t in ["clientes", "cuentas", "transacciones", "tickets"]}
     resumen["fecha_referencia"] = _fmt(ahora)
     con.close()
     return resumen

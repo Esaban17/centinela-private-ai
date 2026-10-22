@@ -1,12 +1,12 @@
 # GUION — Centinela en escena
 
-> **DEMO / DATOS FICTICIOS.** El Banco Atitlán no existe; clientes, cuentas, documentos y alertas son inventados.
+> **DEMO / DATOS FICTICIOS.** El Banco Atitlán no existe; clientes, cuentas y documentos son inventados.
 
-Charla de 10 a 12 minutos. Mensaje central: **con modelos abiertos en infraestructura propia se construye un
+Charla de 9 a 11 minutos. Mensaje central: **con modelos abiertos en infraestructura propia se construye un
 asistente útil (voz, visión, base de datos, herramientas vía MCP) sin enviar datos a terceros ni pagar por token,
 y lo que corre en esta laptop escala a un clúster on-prem.**
 
-Las preguntas exactas están en `config.yaml → guion`: son los botones de atajo de la UI (teclas **1 a 6**) y lo que
+Las preguntas exactas están en `config.yaml → guion`: son los botones de atajo de la UI (teclas **1 a 5**) y lo que
 corren `make warmup`, `make ensayo` y `make check-offline`. Si cambia una pregunta, cámbiela allí y vuelva a ensayar.
 
 ---
@@ -39,12 +39,12 @@ corren `make warmup`, `make ensayo` y `make check-offline`. Si cambia una pregun
    Vuelva a encender el Wi-Fi solo si quiere apagarlo en vivo en el acto 1 (recomendado: es el momento clave).
 7. **Terminal 3 (secundaria, a mano para preguntas):** `make logs`.
 8. En el navegador: pantalla completa (⌃⌘F), zoom para el salón, permiso de micrófono concedido. Pruebe una vez
-   la barra espaciadora (push-to-talk) y la tecla 6.
+   la barra espaciadora (push-to-talk) y la tecla 5.
 9. Pulse **Nueva sesión**: limpia la conversación, el acumulado y el historial del monitor de conexiones.
 
 ---
 
-## 1. Los seis actos
+## 1. Los cinco actos
 
 Tiempos orientativos. «Tecla» es el atajo del guion si la voz falla; el texto completo de cada pregunta está en
 `config.yaml`.
@@ -88,15 +88,7 @@ Tiempos orientativos. «Tecla» es el atajo del guion si la voz falla; el texto 
 | **Mensaje** | «Un modelo de 4B lee el documento; la validación contra la base es una herramienta MCP auditada, no la opinión del modelo.» |
 | **Si falla** | Lectura mala: repita la tecla 5. Si la visión no responde, pase al acto 5 y vuelva al final si sobra tiempo. |
 
-### Acto 5 — NOC (7:30 – 9:00)
-
-| | |
-|---|---|
-| **Digo** | «¿Hay alertas críticas en la infraestructura?» — tecla **6** |
-| **Debe verse** | `alertas_infraestructura`: clúster **VKS** y **NSX Edge** críticas. Si hay tiempo: «¿Qué dice el runbook del NOC?» → cita el runbook y propone pasos. |
-| **Mensaje (puente)** | «Esto mismo corre en VCF/VKS con GPU: Ollama se cambia por vLLM o NVIDIA NIM, SQLite por la base del cliente, y el servidor MCP queda igual.» |
-
-### Acto 6 — Cierre con el panel (9:00 – 11:00)
+### Acto 5 — Cierre con el panel (7:30 – 9:30)
 
 | | |
 |---|---|
@@ -118,7 +110,7 @@ Tiempos orientativos. «Tecla» es el atajo del guion si la voz falla; el texto 
 
 | Si pasa esto | Hago esto |
 |---|---|
-| El micrófono o Whisper no responde | Teclas 1-6 o escribir la pregunta. El chat ya muestra el aviso amable. |
+| El micrófono o Whisper no responde | Teclas 1-5 o escribir la pregunta. El chat ya muestra el aviso amable. |
 | Kokoro falla | Pasa solo al respaldo `say` (voz Paulina); el chip de TTS lo muestra. Si toda la voz falla: botón 🔇 y sigo con texto. |
 | Una respuesta tarda más de ~20 s | **Esc** cancela; repito con la tecla. Ninguna etapa congela la pantalla: cada una tiene su timeout. |
 | El agente no usa la herramienta o responde mal | Repito con la tecla. Si vuelve a fallar, salto al siguiente acto y lo menciono con naturalidad. |
@@ -147,7 +139,7 @@ Grábelo con la configuración final, en la misma laptop y **con el Wi-Fi apagad
    con audio de la aplicación (macOS 13 o superior) y su micrófono como segunda fuente para narrar. Haga una prueba
    de 10 segundos y escúchela antes de grabar todo.
 2. 1080p, 30 fps. Pantalla completa del navegador, con el panel visible.
-3. Siga los 6 actos con la voz (no con las teclas), incluido apagar el Wi-Fi al inicio.
+3. Siga los 5 actos con la voz (no con las teclas), incluido apagar el Wi-Fi al inicio.
 4. Recorte los silencios largos. Copie el archivo al escritorio y a una memoria USB.
 5. En escena, tenga el video abierto y en pausa en otro escritorio (Mission Control) para cambiar en 2 segundos.
 
@@ -155,7 +147,7 @@ Grábelo con la configuración final, en la misma laptop y **con el Wi-Fi apagad
 
 | Criterio (prompt §11) | Verificación |
 |---|---|
-| Con el Wi-Fi apagado se completan los 6 actos | `make check-offline ESTRICTO=1` (corre el guion completo sin red) y el ensayo general |
+| Con el Wi-Fi apagado se completan los 5 actos | `make check-offline ESTRICTO=1` (corre el guion completo sin red) y el ensayo general |
 | 0 conexiones salientes durante toda la demo | Panel (máximo de la sesión), `make check-offline` y `make ensayo` (monitor cada segundo + guardia de salida) |
 | ≥ 90 % de éxito en 10 corridas | `make ensayo` → criterio «éxito ≥ 90 % en cada pregunta» |
 | Primera palabra hablada ≤ 5 s | `make ensayo VOZ=1` → columna «1.er audio» (objetivo: se reporta lo medido) |

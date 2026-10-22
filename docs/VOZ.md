@@ -79,7 +79,7 @@ están implementadas; se elige con `voz.modo_habla` (`primeras_oraciones` | `res
 3. **Las cuentas nunca se dicen completas.** `AT-00042-01` se lee «cuenta terminada en 42 01», aunque el
    texto escrito la traiga completa. Lo que suena en un salón lo oye todo el salón.
 4. **Whisper con español forzado y vocabulario.** `language="es"` y un `prompt_inicial` con los nombres del
-   guion (Cojtí, VKS, NSX, vCenter…) en `config.yaml`.
+   guion (Cojtí, KYC…) en `config.yaml`.
 5. **Filtro de silencio y de alucinaciones.** Con silencio o ruido Whisper inventa «Subtítulos realizados por
    la comunidad de Amara.org» o «Gracias por ver el video». El audio por debajo de `umbral_silencio_rms` no
    se transcribe y esas frases se descartan: un clic accidental del botón no manda basura al agente.

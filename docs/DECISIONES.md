@@ -88,7 +88,7 @@ Variables de Ollama para la demo: `OLLAMA_MAX_LOADED_MODELS=4`, `OLLAMA_KEEP_ALI
    «documento + sección», que es lo que el agente dice en voz alta. El embedding incluye el título del
    documento y de la sección como contexto.
 2. **Búsqueda híbrida con RRF** (vectorial + BM25 de FTS5, `k=60`). La léxica cubre siglas y nombres propios
-   (VKS, NSX, etcd) donde los embeddings flaquean, y sirve de plan B si el modelo de embeddings no responde.
+   (KYC, ACH, POL-IAD-006) donde los embeddings flaquean, y sirve de plan B si el modelo de embeddings no responde.
 3. **El índice recuerda con qué modelo se construyó.** Si se cambia `modelos.embeddings` sin reindexar, la
    búsqueda no mezcla espacios vectoriales: usa solo la léxica y pide `make ingest`.
 4. **La visión es un gancho del orquestador, la validación es MCP.** Extraer campos es trabajo del modelo de

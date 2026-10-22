@@ -98,15 +98,15 @@ async def test_guion_completo_exitoso_y_auditado(orquestador, cfg, db, manifiest
 
 async def test_paso_falla_si_no_usa_la_herramienta_o_no_dice_lo_esperado(orquestador):
     falso = OllamaFalso([final("Todo está tranquilo."),
-                         {"llamadas": [llamar("alertas_infraestructura", severidad="critica")]},
-                         final("Hay dos alertas críticas en almacenamiento.")])
+                         {"llamadas": [llamar("buscar_cliente", texto="Lucía Cojtí")]},
+                         final("Encontré un cliente.")])
     orq = await orquestador(falso)
     res = await correr_guion(orq, [
         {"id": "fraude", "pregunta": "¿Movimientos raros?", "herramientas_esperadas": ["detectar_anomalias"]},
-        {"id": "noc", "pregunta": "¿Alertas?", "herramientas_esperadas": ["alertas_infraestructura"],
-         "respuesta_contiene": ["VKS", "NSX"]}])
+        {"id": "cartera", "pregunta": "¿Lucía Cojtí?", "herramientas_esperadas": ["buscar_cliente"],
+         "respuesta_contiene": ["Cojtí", "CLI-0042"]}])
     assert res[0].problemas == ["no usó detectar_anomalias"]
-    assert res[1].problemas == ["la respuesta no menciona VKS / NSX"]
+    assert res[1].problemas == ["la respuesta no menciona Cojtí / CLI-0042"]
     assert not any(r.ok for r in res)
 
 
@@ -151,21 +151,21 @@ def test_criterios_de_aceptacion():
 
 
 def test_resumen_por_pregunta():
-    filas = [ResultadoPaso("noc", True, total_ms=1000, ttft_ms=300, primer_audio_ms=2000, stt_ms=400),
-             ResultadoPaso("noc", False, ["no usó alertas_infraestructura"], total_ms=3000, ttft_ms=500,
+    filas = [ResultadoPaso("fraude", True, total_ms=1000, ttft_ms=300, primer_audio_ms=2000, stt_ms=400),
+             ResultadoPaso("fraude", False, ["no usó detectar_anomalias"], total_ms=3000, ttft_ms=500,
                            primer_audio_ms=4000, stt_ms=600)]
-    (r,) = ensayo.resumir([{"id": "noc"}], filas)
+    (r,) = ensayo.resumir([{"id": "fraude"}], filas)
     assert (r["exitos"], r["corridas"], r["tasa"]) == (1, 2, 0.5)
     assert r["total_p95_ms"] == 3000 and r["primer_audio_p95_ms"] == 4000 and r["stt_p50_ms"] == 400
-    assert r["problemas"] == [("no usó alertas_infraestructura", 1)]
+    assert r["problemas"] == [("no usó detectar_anomalias", 1)]
 
 
-def test_guion_de_config_cubre_los_seis_actos():
+def test_guion_de_config_cubre_los_actos():
     """Las preguntas del guion de config.yaml usan herramientas que existen y el acto de visión trae su documento."""
     guion = config.cargar()["guion"]
-    assert [p["id"] for p in guion] == ["cartera", "fraude", "ticket", "politica", "documento", "noc"]
+    assert [p["id"] for p in guion] == ["cartera", "fraude", "ticket", "politica", "documento"]
     herramientas = {"buscar_cliente", "resumen_cliente", "movimientos", "detectar_anomalias", "consulta_sql",
-                    "buscar_politicas", "alertas_infraestructura", "crear_ticket", "actualizar_ticket",
+                    "buscar_politicas", "crear_ticket", "actualizar_ticket",
                     "validar_documento"}
     assert all(set(p["herramientas_esperadas"]) <= herramientas for p in guion)
     doc = next(p for p in guion if p["id"] == "documento")

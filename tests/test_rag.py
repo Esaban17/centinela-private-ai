@@ -71,9 +71,6 @@ def test_ingesta_guarda_meta(indice):
 @pytest.mark.parametrize("consulta,archivo,seccion", [
     ("¿Qué dice la política sobre bloqueo preventivo de tarjetas por compras en el extranjero de madrugada?",
      "politica_prevencion_fraude_bloqueo_tarjetas.md", "Criterios de bloqueo preventivo"),
-    ("clúster VKS con nodos del plano de control NotReady y etcd sin quórum",
-     "runbook_noc_vks_nsx.md", "Clúster VKS"),
-    ("failover de NSX Edge y sesiones BGP caídas", "runbook_noc_vks_nsx.md", "NSX Edge"),
     ("qué hacer si el titular de la boleta no coincide con el de la cuenta", "manual_validacion_documental.md",
      "titular"),
     ("¿podemos mandar datos de clientes a un servicio de IA en la nube?",
@@ -100,8 +97,8 @@ async def test_sin_ollama_sigue_con_busqueda_lexica(servidor_rag, ollama_falso):
 
 async def test_indice_sin_embeddings(db, cfg, ollama_falso):
     construir(POLITICAS, config.ruta("vectores", cfg), cfg, con_embeddings=False)
-    r = await buscar(crear_servidor(db, cfg, ollama=ollama_falso.cliente), "runbook etcd quórum")
-    assert r["modo"] == "lexica" and r["fragmentos"][0]["archivo"] == "runbook_noc_vks_nsx.md"
+    r = await buscar(crear_servidor(db, cfg, ollama=ollama_falso.cliente), "titular de la boleta no coincide")
+    assert r["modo"] == "lexica" and r["fragmentos"][0]["archivo"] == "manual_validacion_documental.md"
     assert not [p for p, _ in ollama_falso.peticiones if p == "/api/embed"]
 
 
@@ -139,4 +136,4 @@ async def test_recurso_indice_lista_secciones(servidor_rag):
     async with Client(servidor_rag) as c:
         r = await c.read_resource("politicas://indice")
     texto = r.contents[0].text
-    assert "runbook_noc_vks_nsx.md" in texto and "3. Criterios de bloqueo preventivo" in texto
+    assert "manual_validacion_documental.md" in texto and "3. Criterios de bloqueo preventivo" in texto

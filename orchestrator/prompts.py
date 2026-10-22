@@ -33,12 +33,12 @@ discrepancia con claridad."""
 
 DOCUMENTO_TEXTO_POR_DEFECTO = "Valide este documento contra la base del banco."
 
-INTENCIONES = ["cartera", "fraude", "politicas", "documento", "noc", "tickets", "otro"]
+INTENCIONES = ["cartera", "fraude", "politicas", "documento", "tickets", "otro"]
 
 INTENCION = """Clasifique la intención del mensaje de un ejecutivo bancario en UNA categoría:
 cartera (productos, saldos o ficha de un cliente), fraude (movimientos raros o sospechosos),
 politicas (normas o manuales internos), documento (validar un documento o imagen),
-noc (alertas o infraestructura de TI), tickets (crear o actualizar tickets), otro.
+tickets (crear o actualizar tickets), otro.
 Responda solo con JSON."""
 
 ESQUEMA_INTENCION = {"type": "object", "properties": {"intencion": {"type": "string", "enum": INTENCIONES}},

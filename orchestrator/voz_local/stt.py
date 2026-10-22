@@ -6,7 +6,7 @@ Motores:
 - `faster`: `faster-whisper` (CTranslate2, CPU). Alternativa para Linux y para probar sin Mac.
 
 `auto` elige `mlx` en macOS arm64 y `faster` en lo demás. El idioma se fuerza a español: así Whisper no pierde
-tiempo detectándolo ni cambia a inglés con palabras como «NOC» o «vCenter».
+tiempo detectándolo ni cambia a inglés con siglas como «KYC» o «ACH».
 
 Los modelos se cargan desde `rutas.modelos_voz` (los descarga `make voz-modelos` durante la instalación). En
 tiempo de ejecución no se descarga nada: si falta el modelo, el error lo dice.

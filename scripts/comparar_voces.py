@@ -30,7 +30,7 @@ FRASES = [
     "Buenas tardes. La cliente Lucía Fernanda Cojtí Barrios tiene tres cuentas activas y riesgo KYC medio.",
     "Encontré seis movimientos inusuales este mes: una transferencia de Q18,500.00 a las 02:14 a. m. desde Zacapa.",
     "Según la política de prevención de fraude, sección 4.2, corresponde un bloqueo preventivo de la tarjeta.",
-    "Hay dos alertas críticas: el clúster VKS de producción y un NSX Edge sin redundancia.",
+    "Hay tres transferencias de madrugada desde una ubicación inusual.",
 ]
 VOCES_KOKORO = ["ef_dora", "em_alex", "em_santa"]
 IDIOMAS_KOKORO = ["es-419", "es"]

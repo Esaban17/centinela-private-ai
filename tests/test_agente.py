@@ -110,7 +110,7 @@ async def test_turno_con_herramientas_eventos_y_metricas(armar, db):
 async def test_herramientas_mcp_a_formato_ollama(armar):
     orq = await armar(OllamaFalso())
     tools = {t["function"]["name"]: t["function"] for t in orq.host.para_ollama()}
-    assert len(tools) == 10
+    assert len(tools) == 9
     assert "aprobacion" not in tools["crear_ticket"]["parameters"]["properties"]
     assert set(tools["crear_ticket"]["parameters"]["required"]) >= {"tipo", "prioridad", "titulo", "detalle"}
     escritura = {h.nombre for h in orq.host.herramientas.values() if h.escritura}
