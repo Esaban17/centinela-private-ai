@@ -63,7 +63,7 @@ desde el mismo origen (`web/`), así que no hace falta CORS ni nada externo.
 | `turno.inicio` | `entrada` (`texto` \| `voz` \| `documento`), `texto`, `documento_id` (o `null`) |
 | `transcripcion` | `texto`, `modelo`, `duracion_ms`, `idioma`. Llega antes del `turno.inicio` de un turno de voz (mismo `turno_id`). |
 | `modelo.uso` | El «chip»: `paso` (entero, orden dentro del turno), `rol`, `modelo`, `tarea` (texto corto en español, p. ej. «Clasificar intención»). Uno por cada vez que un modelo trabaja. |
-| `intencion` | `intencion` (`cartera` \| `fraude` \| `politicas` \| `documento` \| `noc` \| `tickets` \| `otro`), `modelo`, `duracion_ms` |
+| `intencion` | `intencion` (`cartera` \| `fraude` \| `politicas` \| `documento` \| `tickets` \| `otro`), `modelo`, `duracion_ms` |
 | `llm.inicio` | `paso`, `rol`, `modelo`, `iteracion` (vuelta del loop, desde 1) |
 | `llm.delta` | `paso`, `texto` (fragmento nuevo de la respuesta; concatenar en orden) |
 | `llm.fin` | `paso`, `rol`, `modelo`, `iteracion`, `ttft_ms`, `duracion_ms`, `tokens_entrada`, `tokens_salida`, `tokens_por_s`, `herramientas_pedidas` (lista de nombres) |

@@ -45,15 +45,14 @@ log = logging.getLogger("banco-atitlan")
 LECTURA = ToolAnnotations(readOnlyHint=True, openWorldHint=False)
 ESCRITURA = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False)
 
-TipoTicket = Literal["fraude", "servicio", "infraestructura"]
+TipoTicket = Literal["fraude", "servicio"]
 Prioridad = Literal["baja", "media", "alta", "critica"]
 EstadoTicket = Literal["abierto", "en_progreso", "resuelto", "cerrado"]
-Severidad = Literal["info", "advertencia", "critica"]
 TipoMovimiento = Literal["deposito", "retiro", "compra", "transferencia_enviada", "transferencia_recibida",
                          "pago_servicio", "pago_prestamo"]
 
 INSTRUCCIONES = """Servidor del Banco Atitlán (banco FICTICIO, datos de demostración).
-Expone clientes, cuentas, transacciones, tickets, alertas del NOC y políticas internas.
+Expone clientes, cuentas, transacciones, tickets y políticas internas.
 Use buscar_cliente antes de resumen_cliente si solo conoce el nombre. Las herramientas
 crear_ticket y actualizar_ticket requieren aprobación humana. Para documentos escaneados, pase los
 campos que extrajo el modelo de visión a validar_documento. Cite documento y sección de las políticas
@@ -331,24 +330,6 @@ def crear_servidor(db: Path | None = None, cfg: dict[str, Any] | None = None, ol
             reg["resumen"] = f"{res['documento']}: {res['veredicto']} ({res['discrepancias']} discrepancias)"
             return {"ok": True, **res}
 
-    @mcp.tool(annotations=LECTURA)
-    async def alertas_infraestructura(ctx: Context, severidad: Severidad | None = None,
-                                      horas: int = 24) -> dict[str, Any]:
-        """Alertas del NOC (vCenter, hosts ESXi, NSX Edge, clústeres VKS, almacenamiento) de las últimas
-        `horas`, de la más reciente a la más antigua. Filtre por severidad: info, advertencia o critica."""
-        async with banco.registro(ctx, "alertas_infraestructura", {"severidad": severidad, "horas": horas}) as reg:
-            ahora = banco.ahora()
-            desde = (ahora - timedelta(hours=max(1, min(int(horas), 24 * 30)))).isoformat(" ")
-            where, args = "fecha >= ? AND fecha <= ?", [desde, ahora.isoformat(" ")]
-            if severidad:
-                where += " AND severidad = ?"
-                args.append(severidad)
-            filas = _filas(banco.lectura.execute(
-                f"SELECT * FROM alertas_infra WHERE {where} ORDER BY fecha DESC LIMIT ?", [*args, banco.max_filas]))
-            abiertas = [f for f in filas if f["estado"] != "resuelta"]
-            reg["resumen"] = f"{len(filas)} alertas, {len(abiertas)} sin resolver"
-            return {"desde": desde, "total": len(filas), "sin_resolver": len(abiertas), "alertas": filas}
-
     # ───────────── Escritura (con aprobación humana) ─────────────
     # La aprobación se resuelve ANTES de ejecutar el cuerpo de la herramienta (Resolve + Elicit).
 
@@ -375,7 +356,7 @@ def crear_servidor(db: Path | None = None, cfg: dict[str, Any] | None = None, ol
         aprobacion: Annotated[ElicitationResult[Aprobacion], Resolve(aprobacion_crear_ticket)],
         cliente_id: str | None = None,
     ) -> dict[str, Any]:
-        """Crea un ticket (fraude, servicio o infraestructura). REQUIERE APROBACIÓN HUMANA: la persona verá
+        """Crea un ticket (fraude o servicio). REQUIERE APROBACIÓN HUMANA: la persona verá
         el detalle y podrá aprobar o rechazar. Si se rechaza, no se crea nada."""
         params = {"tipo": tipo, "prioridad": prioridad, "titulo": titulo, "detalle": detalle,
                   "cliente_id": cliente_id}
@@ -457,12 +438,6 @@ def crear_servidor(db: Path | None = None, cfg: dict[str, Any] | None = None, ol
         return (f"Con los campos extraídos de la {tipo_documento}, llame a validar_documento, explique cada "
                 "discrepancia en lenguaje sencillo y, si hay discrepancia de titular, cite el manual de validación "
                 "documental y proponga el siguiente paso.")
-
-    @mcp.prompt(title="Revisión del NOC")
-    def revision_noc() -> str:
-        """Guía para priorizar alertas críticas de infraestructura."""
-        return ("Liste las alertas críticas sin resolver de las últimas 24 horas, consulte el runbook del NOC "
-                "para cada componente afectado y proponga pasos y prioridad de tickets.")
 
     return mcp
 

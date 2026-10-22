@@ -56,7 +56,7 @@ def _turno(ws, mensaje, aprobar=None):
 
 def test_simulador_contrato_y_aprobacion(simulador):
     assert simulador.get("/").status_code == 200
-    assert len(simulador.get("/api/guion").json()) >= 6
+    assert len(simulador.get("/api/guion").json()) >= 5
     with simulador.websocket_connect("/ws/prueba") as ws:
         assert ws.receive_json()["tipo"] == "sesion.lista"
         ev = _turno(ws, {"tipo": "mensaje", "texto": "¿Ve movimientos raros de Lucía Cojtí este mes?"})

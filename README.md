@@ -1,7 +1,7 @@
 # Centinela — asistente de operaciones con IA privada
 
-> **DEMO / DATOS FICTICIOS.** El Banco Atitlán no existe. Todos los clientes, cuentas, documentos y
-> alertas son inventados.
+> **DEMO / DATOS FICTICIOS.** El Banco Atitlán no existe. Todos los clientes, cuentas y documentos
+> son inventados.
 
 Demo 100 % local: modelos abiertos en Ollama, un servidor MCP propio sobre SQLite, RAG local, visión,
 voz y un panel de soberanía que demuestra cero conexiones a internet.
@@ -97,9 +97,8 @@ Pruebas sugeridas:
 2. `detectar_anomalias` con `cliente_id = CLI-0042` → 6 hallazgos: 2 compras de madrugada en Panamá y una
    ráfaga de 4 transferencias ACH, cada uno con sus motivos.
 3. `consulta_sql` con `DELETE FROM clientes` → rechazada (y registrada en `auditoria`).
-4. `alertas_infraestructura` con `severidad = critica` → clúster VKS y NSX Edge.
-5. `crear_ticket` → Inspector muestra el formulario de aprobación (elicitation). Aprobar o rechazar.
-6. Recurso `esquema://banco`.
+4. `crear_ticket` → Inspector muestra el formulario de aprobación (elicitation). Aprobar o rechazar.
+5. Recurso `esquema://banco`.
 
 En modo línea de comandos (sin UI, sin elicitation):
 
@@ -188,7 +187,6 @@ MCP `validar_documento` con esos campos.
 | `consulta_sql(sql)` | lectura | Un solo SELECT (sqlglot), LIMIT forzado, conexión `mode=ro` + autorizador de SQLite |
 | `buscar_politicas(consulta, k=4)` | lectura | RAG híbrido; cada fragmento trae documento y sección para citar |
 | `validar_documento(tipo_documento, campos)` | lectura | Cruza un documento escaneado con la base: cuenta, titular, moneda, movimiento, saldo declarado |
-| `alertas_infraestructura(severidad?, horas=24)` | lectura | Alertas del NOC |
 | `crear_ticket(...)` | **escritura** | Pide aprobación humana por elicitation |
 | `actualizar_ticket(id, estado, nota)` | **escritura** | Pide aprobación humana por elicitation |
 

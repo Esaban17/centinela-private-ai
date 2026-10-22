@@ -106,7 +106,7 @@ let guion = [];
 async function cargarGuion() {
   try {
     // Acepta cadenas, {texto, titulo} (simulador) o {id, pregunta} (guion de config.yaml del orquestador).
-    const NOMBRES = { politica: 'Política', noc: 'NOC', vision: 'Visión', documento: 'Documento' };
+    const NOMBRES = { politica: 'Política', vision: 'Visión', documento: 'Documento' };
     const titulo = (id) => (id ? NOMBRES[id] || id.charAt(0).toUpperCase() + id.slice(1).replaceAll('_', ' ') : null);
     guion = (await pedir('/api/guion')).map((g, i) => (typeof g === 'string'
       ? { texto: g, titulo: `Pregunta ${i + 1}` }

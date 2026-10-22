@@ -68,7 +68,6 @@ export class Visor {
       case 'detectar_anomalias': return this._anomalias(r);
       case 'movimientos': return this._movimientos(r);
       case 'resumen_cliente': return this._resumenCliente(r);
-      case 'alertas_infraestructura': return this._alertas(r);
       case 'consulta_sql': return r.ok ? this._tablaSQL(r) : null;
       case 'buscar_cliente': return (r.clientes || []).length > 1 ? this._clientes(r) : null;
       case 'crear_ticket': case 'actualizar_ticket': return r.ticket ? this._ticket(r.ticket) : null;
@@ -167,15 +166,6 @@ export class Visor {
         el('tr', {}, el('td', {}, 'Operaciones (30 días)'), el('td', {}, num(act.operaciones))),
         el('tr', {}, el('td', {}, 'Monto movido (30 días)'), el('td', {}, dinero(act.monto_total))),
         el('tr', {}, el('td', {}, 'Tickets abiertos'), el('td', {}, num((r.tickets_abiertos || []).length))))));
-  }
-
-  _alertas(r) {
-    const al = r.alertas || [];
-    return el('div', { class: 'vista', dataset: { titulo: 'NOC' } },
-      el('h3', {}, `🖥 Alertas de infraestructura · ${r.sin_resolver ?? al.length} sin resolver`),
-      al.length ? al.map((a) => el('div', { class: 'alerta', dataset: { sev: a.severidad } },
-        el('div', { class: 'cab' }, el('b', {}, a.componente), el('span', {}, a.severidad), el('span', {}, a.fecha), el('span', {}, a.estado)),
-        el('p', {}, a.mensaje))) : el('p', { class: 'tenue' }, 'Sin alertas en el periodo.'));
   }
 
   _tablaSQL(r) {

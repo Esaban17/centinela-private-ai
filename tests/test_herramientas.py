@@ -30,7 +30,7 @@ async def test_lista_de_herramientas_y_anotaciones(servidor):
     async with Client(servidor) as c:
         tools = {t.name: t for t in (await c.list_tools()).tools}
     assert set(tools) == {"buscar_cliente", "resumen_cliente", "movimientos", "detectar_anomalias", "consulta_sql",
-                          "buscar_politicas", "alertas_infraestructura", "crear_ticket", "actualizar_ticket",
+                          "buscar_politicas", "crear_ticket", "actualizar_ticket",
                           "validar_documento"}
     assert tools["crear_ticket"].annotations.read_only_hint is False
     assert tools["consulta_sql"].annotations.read_only_hint is True
@@ -108,12 +108,6 @@ async def test_consulta_sql_rechaza_escritura_y_audita(servidor, db):
     assert estado == "rechazado"
 
 
-async def test_alertas_criticas(servidor):
-    r = await llamar(servidor, "alertas_infraestructura", {"severidad": "critica", "horas": 24})
-    assert r["total"] == 2
-    assert {a["componente"] for a in r["alertas"]} == {"clúster VKS", "NSX Edge"}
-
-
 async def test_buscar_politicas_sin_indice_no_inventa(servidor):
     r = await llamar(servidor, "buscar_politicas", {"consulta": "bloqueo preventivo de tarjetas"})
     assert r["fragmentos"] == [] and r["disponible"] is False
@@ -185,4 +179,4 @@ async def test_recursos_y_prompts(servidor):
         esquema = (await c.read_resource("esquema://banco")).contents[0].text
         assert "## transacciones" in esquema and "DATOS FICTICIOS" in esquema
         prompts = {p.name for p in (await c.list_prompts()).prompts}
-        assert {"caso_fraude", "revision_noc"} <= prompts
+        assert {"caso_fraude", "validar_documento_escaneado"} <= prompts

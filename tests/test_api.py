@@ -63,16 +63,16 @@ def test_websocket_turno_con_aprobacion(cliente, db):
 
 
 def test_rest_y_reanudar_por_websocket(cliente):
-    falso = OllamaFalso([{"llamadas": [llamar("alertas_infraestructura", severidad="critica")]},
-                         {"contenido": "Hay dos alertas críticas."}])
+    falso = OllamaFalso([{"llamadas": [llamar("buscar_cliente", texto="Lucía Cojtí")]},
+                         {"contenido": "Encontré a la clienta."}])
     with cliente(falso) as c:
         with c.websocket_connect("/ws/sala-2") as ws:
             ws.receive_json()
-            r = c.post("/api/sesiones/sala-2/mensajes", json={"texto": "¿Alertas críticas?"})
+            r = c.post("/api/sesiones/sala-2/mensajes", json={"texto": "¿Quién es Lucía Cojtí?"})
             assert r.status_code == 202 and r.json() == {"turno_id": "t-0001"}
             eventos = recibir_hasta(ws, "turno.fin")
         fin = [e for e in eventos if e["tipo"] == "herramienta.fin"][0]
-        assert fin["datos"]["resultado"]["total"] == 2
+        assert fin["datos"]["resultado"]["coincidencias"] == 1
         # Una UI que se reconecta pide lo que se perdió desde un seq conocido.
         with c.websocket_connect(f"/ws/sala-2?desde_seq={fin['seq']}") as ws:
             primero = ws.receive_json()
@@ -82,7 +82,7 @@ def test_rest_y_reanudar_por_websocket(cliente):
 def test_rest_varios(cliente):
     with cliente(OllamaFalso()) as c:
         salud = c.get("/api/salud").json()
-        assert salud["mcp"] is True and salud["ollama"] == "0.30.0-falso" and salud["herramientas"] == 10
+        assert salud["mcp"] is True and salud["ollama"] == "0.30.0-falso" and salud["herramientas"] == 9
         assert salud["fecha_demo"] == "2026-11-20"
         assert [p["id"] for p in c.get("/api/guion").json()][:2] == ["cartera", "fraude"]
         assert c.post("/api/aprobaciones/ap-inexistente", json={"aprobar": True}).status_code == 404
@@ -161,7 +161,7 @@ async def test_host_mcp_por_stdio_con_aprobacion(db, cfg):
     aprobador = Aprobador()
     await host.conectar()
     try:
-        assert len(host.herramientas) == 10
+        assert len(host.herramientas) == 9
         r = await host.llamar("crear_ticket", {"tipo": "servicio", "prioridad": "baja", "titulo": "Prueba stdio",
                                                "detalle": "x"}, {"usuario": "prueba", "modelo": "m"}, 20,
                               solicitante=aprobador)

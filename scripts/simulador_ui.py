@@ -48,7 +48,6 @@ GUION = [
     {"acto": 2, "titulo": "Ticket", "texto": "Abra un ticket para el equipo de fraude."},
     {"acto": 3, "titulo": "Política", "texto": "¿Qué dice nuestra política sobre bloqueo preventivo de tarjetas en este caso?"},
     {"acto": 4, "titulo": "Documento", "texto": "Valide esta boleta de depósito contra la base.", "documento_id": "demo-boleta"},
-    {"acto": 5, "titulo": "NOC", "texto": "¿Hay alertas críticas en la infraestructura?"},
 ]
 
 
@@ -200,8 +199,6 @@ def _resumen(nombre: str, r: dict) -> str:
             return f"{(r.get('cliente') or {}).get('nombre', '?')}: {len(r.get('productos', []))} productos"
         case "detectar_anomalias":
             return f"{r.get('total_hallazgos', 0)} hallazgos"
-        case "alertas_infraestructura":
-            return f"{r.get('total', 0)} alertas, {r.get('sin_resolver', 0)} sin resolver"
         case "buscar_politicas":
             return f"{len(r.get('fragmentos', []))} fragmentos"
         case "consulta_sql":
@@ -274,8 +271,6 @@ def clasificar(texto: str) -> str:
         return "politicas"
     if any(p in t for p in ("raro", "anomal", "fraude", "sospech")):
         return "fraude"
-    if any(p in t for p in ("alerta", "infraestructura", "noc", "vks", "nsx")):
-        return "noc"
     if any(p in t for p in ("cartera", "cliente", "clienta", "saldo")):
         return "cartera"
     return "otro"
@@ -412,26 +407,14 @@ async def acto_documento(t: Turno) -> None:
     await t.final(texto, hablado)
 
 
-async def acto_noc(t: Turno) -> None:
-    await t.llm(["alertas_infraestructura"])
-    r = await t.herramienta("alertas_infraestructura", {"severidad": "critica", "horas": 24})
-    al = r.get("alertas", [])
-    lineas = [f"- {a['fecha'][11:16]} · {a['componente']}: {a['mensaje']}" for a in al]
-    texto = (f"Hay {len(al)} alertas críticas sin resolver:\n" + "\n".join(lineas) +
-             "\nPrioridad 1: recuperar el quórum de etcd en el clúster VKS (afecta banca en línea). "
-             "Prioridad 2: revisar las sesiones BGP del Edge NSX tras el failover.")
-    await t.final(texto, f"Sí, hay {len(al)} alertas críticas: el clúster VKS sin quórum de etcd y un failover "
-                         "del Edge de NSX. Atendería primero el clúster.")
-
-
 async def acto_otro(t: Turno) -> None:
     await t.final("Soy Centinela, el asistente de operaciones del Banco Atitlán (ficticio). Puedo consultar "
-                  "clientes, detectar anomalías, buscar en políticas internas, validar documentos y revisar "
-                  "alertas del NOC. ¿En qué le ayudo?", "¿En qué le ayudo?")
+                  "clientes, detectar anomalías, buscar en políticas internas, y validar documentos. "
+                  "¿En qué le ayudo?", "¿En qué le ayudo?")
 
 
 ACTOS = {"cartera": acto_cartera, "fraude": acto_fraude, "tickets": acto_ticket, "politicas": acto_politicas,
-         "noc": acto_noc, "otro": acto_otro}
+         "otro": acto_otro}
 
 
 # ─────────────────────────── Documento de ejemplo ───────────────────────────

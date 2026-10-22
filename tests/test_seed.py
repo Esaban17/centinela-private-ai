@@ -51,10 +51,6 @@ def test_casos_del_guion(db_plantilla):
         "WHERE c.cliente_id='CLI-0042' AND t.fecha_hora >= '2026-10-21' "
         "AND CAST(substr(t.fecha_hora,12,2) AS INT) < 6").fetchone()[0]
     assert nocturnas == 6  # 2 compras en Panamá + ráfaga de 4 transferencias
-    criticas = con.execute(
-        "SELECT COUNT(*) FROM alertas_infra WHERE severidad='critica' AND estado='abierta' "
-        "AND fecha >= '2026-11-19 09:00:00'").fetchone()[0]
-    assert criticas == 2
 
 
 def test_integridad_referencial(db_plantilla):

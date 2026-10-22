@@ -50,9 +50,9 @@ def test_am_pm_y_pregunta_siguiente():
 
 
 def test_descarta_tablas_codigo_y_encabezados():
-    texto = ("## Resumen\nHay 2 alertas.\n\n| Componente | Estado |\n|---|---|\n| VKS | crítica. Ver runbook |\n\n"
-             "```sql\nSELECT 1. FROM x\n```\n- Revisar el NSX Edge.\n1. Abrir ticket.\n---\nFin.")
-    assert partir_en_oraciones(texto, min_caracteres=0) == ["Hay 2 alertas.", "Revisar el NSX Edge.",
+    texto = ("## Resumen\nHay 2 alertas.\n\n| Componente | Estado |\n|---|---|\n| Tarjeta | bloqueada. Ver política |\n\n"
+             "```sql\nSELECT 1. FROM x\n```\n- Revisar la tarjeta.\n1. Abrir ticket.\n---\nFin.")
+    assert partir_en_oraciones(texto, min_caracteres=0) == ["Hay 2 alertas.", "Revisar la tarjeta.",
                                                             "Abrir ticket.", "Fin."]
 
 
