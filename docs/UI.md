@@ -12,7 +12,7 @@ de `web/` apunte a una URL externa.
 |---|---|---|
 | Conversación | Chat con streaming, transcripción de voz, chips de modelo por paso, tarjetas de herramientas plegables (parámetros y resultado MCP), tarjetas de aprobación, citas RAG | Eventos del contrato v1 (`docs/CONTRATO_EVENTOS.md`) |
 | Visor | Documento con los campos extraídos y su cruce con la base; ficha del cliente; gráfica y tabla de anomalías; movimientos con anomalías en rojo; resultados SQL; ticket creado | `documento.extraido` y `herramienta.fin.resultado` (el `structuredContent` de MCP) |
-| Panel de Soberanía | Conexiones salientes reales, red del equipo, costo marginal Q0.00 vs. costo equivalente, acumulado, modelos cargados y memoria, latencias del último turno | `GET /api/soberania` (cada 1.5 s) + eventos `turno.fin` y `sesion.acumulado` |
+| Panel de Soberanía | Conexiones salientes reales, red del equipo, costo marginal Q0.00 vs. costo equivalente, datos sensibles que no salieron (por nivel de clasificación), acumulado, modelos cargados y memoria, latencias del último turno | `GET /api/soberania` (cada 1.5 s) + eventos `turno.fin` y `sesion.acumulado` |
 
 Entrada: texto (Enter envía), **push-to-talk** (mantener el botón «Hablar» o la barra espaciadora fuera del
 cuadro de texto), botones de atajo del guion (teclas `1`–`6`), documento de muestra o subido, `Esc` detiene

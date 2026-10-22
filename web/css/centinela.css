@@ -279,6 +279,24 @@ table.campos td:last-child { font-weight: 600; font-size: 1rem; }
 .etapa .ms { text-align: right; font-variant-numeric: tabular-nums; }
 .chips-modelos { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .5rem; }
 
+/* «Lo que no salió»: datos sensibles por nivel de clasificación */
+.sensibles[data-estado="con-datos"] { border-color: var(--violeta); }
+.sens-cabeza { display: flex; align-items: baseline; gap: .6rem; }
+.sens-cifra { font-size: 2.2rem; font-weight: 900; line-height: 1; color: var(--violeta); font-variant-numeric: tabular-nums; }
+.sensibles[data-estado="vacio"] .sens-cifra { color: var(--tenue); }
+.sens-cabeza .detalle { margin: 0; }
+.sens-niveles { display: flex; flex-direction: column; gap: .35rem; margin-top: .45rem; }
+.sens-nivel { display: grid; grid-template-columns: 6.8rem 1fr; align-items: start; gap: .5rem; }
+.sens-nivel .nivel {
+  font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; text-align: center;
+  border: 1px solid currentColor; border-radius: 999px; padding: .1rem .4rem; white-space: nowrap;
+}
+.sens-nivel[data-nivel="restringido"] .nivel { color: var(--rojo); background: var(--rojo-fondo); }
+.sens-nivel[data-nivel="confidencial"] .nivel { color: var(--ambar); background: var(--ambar-fondo); }
+.sens-nivel[data-nivel="interno"] .nivel { color: var(--acento); }
+.sens-nivel .chips { gap: .3rem; }
+.sens-nivel .chip b { font-variant-numeric: tabular-nums; }
+
 /* ───── Selector de modelos y alerta de RAM ───── */
 .boton-pildora { cursor: pointer; color: var(--texto); }
 .boton-pildora:hover { border-color: var(--acento); }

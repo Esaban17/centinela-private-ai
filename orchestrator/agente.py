@@ -243,7 +243,7 @@ class Agente:
         for m in turno.modelos:
             if m not in a["modelos_usados"]:
                 a["modelos_usados"].append(m)
-        turno.sesion.bus.emitir("sesion.acumulado", dict(a))
+        turno.sesion.bus.emitir("sesion.acumulado", {**a, "datos_sensibles": turno.sesion.sensibles.resumen()})
         log.info("turno %s · fin · ok=%s · %d ms · %s", turno.id, ok, lat["total"], ", ".join(turno.herramientas))
 
     # ───────────── loop de herramientas ─────────────
@@ -321,6 +321,7 @@ class Agente:
             turno.llamada_actual = None
         dur = int((time.perf_counter() - t) * 1000)
         turno.latencias["herramientas"] += max(0, dur - (turno.latencias["aprobacion"] - aprob_antes))
+        turno.sesion.sensibles.herramienta(nombre, argumentos, datos)
         turno.emitir("herramienta.fin", {"llamada_id": llamada_id, "nombre": nombre, "ok": ok, "duracion_ms": dur,
                                          "resumen": resumen, "resultado": datos})
         if nombre == "buscar_politicas" and isinstance(datos, dict) and datos.get("fragmentos"):
@@ -400,6 +401,7 @@ class Agente:
         if tr.modelo not in turno.modelos:
             turno.modelos.append(tr.modelo)
         turno.emitir("modelo.uso", {"paso": 0, "rol": "stt", "modelo": tr.modelo, "tarea": "Transcribir voz"})
+        turno.sesion.sensibles.voz(turno.id)
         turno.emitir("transcripcion", {"texto": tr.texto, "modelo": tr.modelo, "idioma": tr.idioma,
                                        "duracion_ms": turno.latencias["stt"]})
         if not tr.texto.strip():
@@ -424,6 +426,7 @@ class Agente:
                 "No pude leer el documento. Intente con una imagen más nítida."
             raise ErrorTurno("documento_ilegible", mensaje, "vision") from None
         turno.sesion.acumulado["documentos_analizados"] += 1
+        turno.sesion.sensibles.documento(documento_id, ex.campos)
         turno.emitir("documento.extraido", {"documento_id": documento_id, "nombre": nombre,
                                             "tipo_documento": ex.tipo_documento, "campos": ex.campos,
                                             "modelo": ex.modelo, "duracion_ms": turno.latencias["vision"],

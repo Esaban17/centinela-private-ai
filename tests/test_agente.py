@@ -434,3 +434,13 @@ async def test_documento_ilegible_da_el_mensaje_de_la_vision(armar):
     ev = await turno(orq, "", entrada="documento", documento_id=orq.documentos.guardar("x.png", b"x"))
     err = de_tipo(ev, "error")[0]
     assert err["codigo"] == "documento_ilegible" and "borrosa" in err["mensaje"]
+
+
+async def test_acumulado_trae_datos_sensibles_clasificados(armar, db):
+    orq = await armar(OllamaFalso(list(CARTERA)))
+    ev = await turno(orq, "¿Cómo está la cartera de Lucía Cojtí?")
+    d = de_tipo(ev, "sesion.acumulado")[-1]["datos_sensibles"]
+    restringido = {c["id"]: c["cantidad"] for c in d["niveles"][0]["categorias"]}
+    assert d["niveles"][0]["nivel"] == "restringido" and d["total"] >= 4
+    assert restringido["clientes"] >= 1 and restringido["nombres"] >= 1 and restringido["cuentas"] >= 1
+    assert restringido["montos"] >= 1

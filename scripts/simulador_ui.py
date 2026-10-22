@@ -37,6 +37,7 @@ from comun.config import RAIZ
 from mcp_server.server import crear_servidor
 from orchestrator import modelos_api
 from orchestrator.soberania import crear_router
+from orchestrator.soberania.sensibles import Inventario
 
 CFG = config.cargar()
 MODELOS = {rol: (CFG["modelos"][rol].get("nombre") or CFG["modelos"][rol].get("motor"))
@@ -68,6 +69,7 @@ class Sesion:
     acumulado: dict = field(default_factory=lambda: {
         "turnos": 0, "tokens_entrada": 0, "tokens_salida": 0, "herramientas_ejecutadas": 0,
         "documentos_analizados": 0, "aprobaciones": {"aprobadas": 0, "rechazadas": 0}, "modelos_usados": []})
+    sensibles: Inventario = field(default_factory=Inventario)
     contexto: dict = field(default_factory=dict)   # "memoria": último cliente mencionado, etc.
 
     async def emitir(self, tipo: str, turno_id: str | None, datos: dict) -> None:
@@ -160,6 +162,7 @@ class Turno:
         await asyncio.sleep(0.15)
         self.lat["herramientas"] += max(dur, 1)
         res = r.structured_content or {}
+        self.s.sensibles.herramienta(nombre, args, res)
         await self.ev("herramienta.fin", llamada_id=llamada_id, nombre=nombre, ok=not r.is_error,
                       duracion_ms=max(dur, 1), resumen=_resumen(nombre, res), resultado=res)
         return res
@@ -185,7 +188,7 @@ class Turno:
         a["tokens_salida"] += self.tok_out
         a["herramientas_ejecutadas"] += len(self.herramientas)
         a["modelos_usados"] = list(dict.fromkeys(a["modelos_usados"] + self.modelos))
-        await self.s.emitir("sesion.acumulado", None, a)
+        await self.s.emitir("sesion.acumulado", None, {**a, "datos_sensibles": self.s.sensibles.resumen()})
 
 
 CONTEXTO_LLAMADA: dict[str, Any] = {}
@@ -377,6 +380,7 @@ async def acto_documento(t: Turno) -> None:
     await t.esperar("vision", 1600)
     campos = doc.get("campos") or {"tipo": "desconocido"}
     t.s.acumulado["documentos_analizados"] += 1
+    t.s.sensibles.documento(t.documento_id or "", campos)
     await t.ev("documento.extraido", documento_id=t.documento_id, nombre=doc.get("nombre", "documento"),
                tipo_documento=doc.get("tipo_documento", "desconocido"), campos=campos, modelo=MODELOS["vision"],
                duracion_ms=t.lat["vision"], advertencias=doc.get("advertencias", []))
@@ -537,6 +541,7 @@ async def audio(sid: str, audio: UploadFile = File(...)):
     datos = await audio.read()
     texto = next(_voz)["texto"]
     tid = f"t-{s.turnos + 1:04d}"
+    s.sensibles.voz(tid)
     await s.emitir("transcripcion", tid, {"texto": texto, "modelo": MODELOS["stt"] + " (simulado)",
                                           "duracion_ms": 420, "idioma": "es", "bytes_audio": len(datos)})
     iniciar(s, "voz", texto, None, tid)
