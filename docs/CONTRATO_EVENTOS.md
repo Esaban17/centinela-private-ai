@@ -8,6 +8,11 @@ Revisión 1.1: mensaje `preferencias`, evento `pong`, código `documento_ilegibl
 
 Revisión 1.2: `sesion.acumulado` trae `datos_sensibles` («Lo que no salió» del Panel de Soberanía).
 
+Revisión 1.3: `sesion.lista` trae `mcp_servidores` (`[{nombre, conectado, ubicacion: local|remoto, herramientas}]`)
+para el diagrama de arquitectura de la pestaña «Flujo», y nuevo evento `guardia` (`nombre`, `accion`, `mensaje`):
+una guardia corrigió algo en el turno (hoy: `respaldo_respuesta`, cuando el modelo describe la herramienta en vez de
+dar el dato y se muestra el resultado).
+
 Todo es local: el orquestador escucha en `127.0.0.1:<orquestador.puerto>` (8765 por defecto). La UI se sirve
 desde el mismo origen (`web/`), así que no hace falta CORS ni nada externo.
 
@@ -92,6 +97,7 @@ deduplicar, nunca los valores.
 | `herramienta.fin` | `llamada_id`, `nombre`, `ok` (bool), `duracion_ms`, `resumen` (una línea), `resultado` (el `structuredContent` de MCP, completo) |
 | `citas` | `citas`: `[{documento, seccion, fragmento, puntaje}]`. Se emite tras cada `buscar_politicas` con fragmentos. |
 | `documento.extraido` | `documento_id`, `nombre`, `tipo_documento`, `campos` (objeto validado por Pydantic), `modelo`, `duracion_ms`, `advertencias` (lista) |
+| `guardia` | `nombre` (`respaldo_respuesta`), `accion` (`corregida`), `mensaje`. Una guardia actuó en el turno (rev. 1.3). |
 | `respuesta.final` | `texto` (respuesta escrita completa), `resumen_hablado` (texto corto para voz, o `null`), `citas` |
 | `voz.audio` | `indice` (orden de la oración), `texto`, `url` (`/api/audio/{id}`, servido por el orquestador), `formato` (`wav`), `motor` (`kokoro` \| `say`), `duracion_ms` |
 | `turno.fin` | `ok` (bool), `cancelado` (bool), `iteraciones`, `metricas` (ver abajo) |

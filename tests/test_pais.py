@@ -398,3 +398,11 @@ def test_sensibles_demo_banco():
     assert r["nombres"] == 2          # el mismo nombre en el dictamen y en la alerta cuenta una vez
     assert r["casos"] == 2
     assert r["montos"] >= 3
+
+
+def test_ubicacion_servidores_mcp():
+    from orchestrator.mcp_host import HostMCP, HostMCPMultiple, ServidorHTTP
+    remoto = HostMCP(ServidorHTTP("http://10.2.15.51:8101/mcp", {}), nombre="demo-banco")
+    local = HostMCP(object(), nombre="politicas")
+    estado = HostMCPMultiple([remoto, local]).estado()
+    assert [(e["nombre"], e["ubicacion"]) for e in estado] == [("demo-banco", "remoto"), ("politicas", "local")]
