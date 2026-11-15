@@ -325,3 +325,27 @@ def test_politicas_pais_se_indexan(tmp_path, cfg_pais):
 
 def test_observador_no_queda_puesto():
     assert observador_actual.get() is None
+
+
+def test_recordatorio_tras_herramientas():
+    from orchestrator.pais import a_openai
+    msgs = [{"role": "user", "content": "¿CLI-00119 califica?"},
+            {"role": "assistant", "content": "", "tool_calls": [{"id": "c1", "function": {
+                "name": "evaluar_solicitud_credito", "arguments": {"cliente": "CLI-00119"}}}]},
+            {"role": "tool", "tool_name": "evaluar_solicitud_credito", "tool_call_id": "c1",
+             "content": "DICTAMEN: SUSPENDIDO"}]
+    sin = a_openai(msgs)
+    con = a_openai(msgs, recordatorio=True)
+    assert sin[-1]["role"] == "tool"
+    assert con[-1]["role"] == "user" and "evaluar_solicitud_credito" in con[-1]["content"]
+    # Si la conversación no termina en herramienta, no se agrega nada.
+    assert a_openai(msgs[:1], recordatorio=True) == a_openai(msgs[:1])
+
+
+def test_respuesta_meta():
+    from orchestrator.agente import respuesta_meta
+    assert respuesta_meta("La respuesta anterior es un dictamen de la herramienta evaluar_solicitud_credito.")
+    assert respuesta_meta("La respuesta es el dictamen devuelto por la función evaluar_solicitud_credito.")
+    assert not respuesta_meta("DICTAMEN: SUSPENDIDO. El cliente tiene una alerta de fraude abierta (NR-005).")
+    assert not respuesta_meta("El cliente califica por Q200,000 a 11.50 %.")
+    assert not respuesta_meta("")

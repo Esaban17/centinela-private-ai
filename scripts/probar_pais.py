@@ -129,8 +129,11 @@ async def principal(args: argparse.Namespace) -> int:
         try:
             res = await ag.preguntar([{"role": "user", "content": "¿El cliente CLI-00119 califica para un préstamo "
                                                                   "personal de Q50,000?"}])
-            linea("SUSPEND" in res["texto"].upper(), f"Agente PAIS ({ag.nombre})",
-                  f"«{res['texto'][:90]}» · {res['duracion_ms'] / 1000:.1f} s")
+            ok = "SUSPEND" in res["texto"].upper()
+            linea(ok if ok else None, f"Agente PAIS ({ag.nombre})",
+                  f"«{res['texto'][:90]}» · {res['duracion_ms'] / 1000:.1f} s" + ("" if ok else
+                  " · respondió sin el dictamen: revise las instrucciones de agente-banco (docs/PAIS.md)"))
+            fallas += not ok
         except PaisNoDisponible as e:
             linea(False, f"Agente PAIS ({ag.nombre})", str(e))
             fallas += 1
