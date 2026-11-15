@@ -79,6 +79,7 @@ orquestador:
   fecha_demo: "2026-11-12"                  # la fecha de referencia de las bases de mcp-demo
   max_iteraciones: 4
   respaldo_respuesta_meta: true             # si aun así responde «meta», se muestra el resultado de la herramienta
+  turnos_previos_llm: 0                     # el 8B solo ve el turno en curso (si no, repite el dictamen anterior)
   memoria_mensajes: 8                       # contexto de 8192 tokens en el ModelEndpoint
   max_caracteres_resultado: 3000
   precalentar_al_arrancar: true

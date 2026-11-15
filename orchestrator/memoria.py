@@ -26,8 +26,26 @@ class Memoria:
         inicio = next((i for i in usuarios if i >= limite), usuarios[-1])
         self.mensajes = self.mensajes[inicio:]
 
-    def para_llm(self, sistema: str) -> list[dict[str, Any]]:
-        return [{"role": "system", "content": sistema}, *self.mensajes]
+    def para_llm(self, sistema: str, turnos_previos: int | None = None) -> list[dict[str, Any]]:
+        """`turnos_previos`: None = toda la memoria. Un número N = el turno en curso completo y, de los N turnos
+        anteriores, solo la pregunta y la respuesta final (sin llamadas ni resultados de herramientas). Con un modelo
+        chico (Llama 3.1 8B) el historial completo lo hace repetir el dictamen anterior en vez de responder."""
+        if turnos_previos is None:
+            return [{"role": "system", "content": sistema}, *self.mensajes]
+        usuarios = [i for i, m in enumerate(self.mensajes) if m["role"] == "user"]
+        if not usuarios:
+            return [{"role": "system", "content": sistema}, *self.mensajes]
+        actual = self.mensajes[usuarios[-1]:]
+        previos: list[dict[str, Any]] = []
+        anteriores = usuarios[:-1][-turnos_previos:] if turnos_previos > 0 else []
+        limites = anteriores + [usuarios[-1]]
+        for a, b in zip(limites[:-1], limites[1:]):
+            finales = [m for m in self.mensajes[a + 1:b] if m["role"] == "assistant" and not m.get("tool_calls")
+                       and m.get("content")]
+            previos.append(self.mensajes[a])
+            if finales:
+                previos.append({"role": "assistant", "content": finales[-1]["content"]})
+        return [{"role": "system", "content": sistema}, *previos, *actual]
 
     def historial(self) -> list[dict[str, Any]]:
         return list(self.mensajes)
