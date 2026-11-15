@@ -18,8 +18,8 @@ from typing import Any
 from comun import config
 from orchestrator import ganchos as mod_ganchos
 from orchestrator import registro
-from orchestrator.mcp_host import HostMCP, parametros_stdio
-from orchestrator.ollama import Ollama
+from orchestrator.mcp_host import crear_host
+from orchestrator.pais import crear_llm
 from orchestrator.orquestador import Orquestador
 
 GRIS, VERDE, AMARILLO, ROJO, AZUL, FIN = "\033[90m", "\033[32m", "\033[33m", "\033[31m", "\033[36m", "\033[0m"
@@ -71,9 +71,13 @@ async def principal(args: argparse.Namespace) -> None:
     cfg = config.cargar()
     if args.modelo:
         cfg["modelos"]["agente"]["nombre"] = args.modelo
-    ollama = Ollama(cfg)
-    orq = Orquestador(cfg, ollama, HostMCP(parametros_stdio(cfg)), mod_ganchos.cargar(cfg, ollama))
+    ollama = crear_llm(cfg)
+    orq = Orquestador(cfg, ollama, crear_host(cfg), mod_ganchos.cargar(cfg, ollama))
     orq.sesion("terminal").hablar = False
+    if args.pais:
+        if not orq.cambiar_modo(orq.sesion("terminal"), "pais"):
+            print("El modo agente PAIS no está configurado (proveedor pais y pais.agente.id).")
+            return
     await orq.host.conectar()
     sesion = orq.sesion("terminal")
     pintor = asyncio.create_task(_pintar(orq, sesion.bus.suscribir(), args.auto))
@@ -107,6 +111,7 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("pregunta", nargs="*", help="pregunta única (si no, modo interactivo)")
     p.add_argument("--modelo", help="modelo agente a usar en lugar del de config.yaml")
+    p.add_argument("--pais", action="store_true", help="modo agente PAIS: delegar cada turno a agente-banco")
     p.add_argument("--auto", choices=["aprobar", "rechazar"], help="responder aprobaciones sin preguntar")
     p.add_argument("--log", default="WARNING", help="nivel de log en stderr (INFO muestra el detalle enmascarado)")
     args = p.parse_args()

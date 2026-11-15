@@ -352,3 +352,7 @@ table.campos td:last-child { font-weight: 600; font-size: 1rem; }
   .zona { min-height: 70vh; }
   .estado-barra { flex-wrap: wrap; }
 }
+
+/* Modo PAIS: los modelos corren en el datacenter, no en la RAM de este equipo. */
+body.modo-pais #estado-ram,
+body.modo-pais #aviso-ram { display: none !important; }

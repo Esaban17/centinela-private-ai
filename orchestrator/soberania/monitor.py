@@ -29,10 +29,27 @@ class MonitorSoberania:
         self.max_salientes = 0
         self.historial_salientes: list[dict] = []
 
+    def _modelos(self) -> dict:
+        """Ollama: modelos en memoria de este equipo. PAIS: los ModelEndpoint configurados (corren en el
+        datacenter; el monitor no abre conexiones para consultarlos)."""
+        if (self.cfg.get("proveedor") or "ollama") != "pais":
+            return ollama.modelos_cargados(self.url_ollama)
+        vistos, modelos = set(), []
+        for rol, m in (self.cfg.get("modelos") or {}).items():
+            nombre = (m or {}).get("nombre")
+            if rol in ("stt", "tts") or not nombre or nombre in vistos:
+                continue
+            vistos.add(nombre)
+            modelos.append({"nombre": f"{nombre} (PAIS)", "memoria_gb": 0, "gpu_pct": 0, "parametros": None,
+                            "cuantizacion": None, "contexto": None, "expira": None})
+        return {"disponible": True, "modelos": modelos, "memoria_total_gb": 0, "remoto": True,
+                "url": (self.cfg.get("pais") or {}).get("url")}
+
     def instantanea(self, tokens_entrada: int = 0, tokens_salida: int = 0) -> dict:
         """Estado actual. Los tokens acumulados los manda la UI (salen de `sesion.acumulado`)."""
         t0 = time.perf_counter()
-        con = conexiones.revisar(self.procesos, self.pid_raiz)
+        con = conexiones.revisar(self.procesos, self.pid_raiz,
+                                 salida.es_permitido if salida.permitidos() else None)
         if con.total_salientes:
             self.max_salientes = max(self.max_salientes, con.total_salientes)
             ahora = time.strftime("%H:%M:%S")
@@ -53,7 +70,8 @@ class MonitorSoberania:
                 "guardia_activa": salida.activa(),
             },
             "red": red.estado_red(),
-            "ollama": ollama.modelos_cargados(self.url_ollama),
+            "ollama": self._modelos(),
+            "proveedor": self.cfg.get("proveedor") or "ollama",
             "sistema": {
                 "memoria_total_gb": round(mem.total / 1024 ** 3, 1),
                 "memoria_usada_gb": round((mem.total - mem.available) / 1024 ** 3, 1),

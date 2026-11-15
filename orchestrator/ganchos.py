@@ -124,7 +124,8 @@ def _fabrica(modulo: str, nombre: str, *args: Any) -> Any | None:
 def cargar(cfg: dict[str, Any], ollama: Any) -> Ganchos:
     """Busca las implementaciones reales; lo que falte queda «no disponible»."""
     g = Ganchos.vacios()
-    g.vision = _fabrica("orchestrator.vision", "crear_vision", cfg, ollama) or g.vision
+    if (cfg.get("vision") or {}).get("habilitada", True) is not False:  # modo PAIS sin GPU: sin modelo de visión
+        g.vision = _fabrica("orchestrator.vision", "crear_vision", cfg, ollama) or g.vision
     g.transcriptor = _fabrica("orchestrator.voz", "crear_transcriptor", cfg) or g.transcriptor
     g.sintetizador = _fabrica("orchestrator.voz", "crear_sintetizador", cfg) or g.sintetizador
     for nombre, obj in (("visión", g.vision), ("STT", g.transcriptor), ("TTS", g.sintetizador)):

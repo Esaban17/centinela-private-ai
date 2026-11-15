@@ -1,0 +1,24 @@
+# Centinela en pais-deps (10.2.15.51). Ver docs/PAIS.md.
+services:
+  centinela:
+    build:
+      context: ../..
+      dockerfile: despliegue/pais-deps/Dockerfile
+      args:
+        VOZ: "${VOZ:-1}"
+    image: gq-centinela-pais:1.0
+    container_name: centinela-pais
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      CENTINELA__orquestador__puerto: "8300"
+      CENTINELA__orquestador__host: "0.0.0.0"
+    ports:
+      - "8300:8300"
+    volumes:
+      - centinela-datos:/datos
+    extra_hosts:                      # por si el DNS del contenedor no resuelve el dominio del lab
+      - "pais.vcflab.local:10.2.20.10"
+      - "keycloak.vcflab.local:10.2.15.51"
+volumes:
+  centinela-datos:

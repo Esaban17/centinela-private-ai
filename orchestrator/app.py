@@ -20,8 +20,8 @@ from comun import config
 from comun import modelos as sel_modelos
 from orchestrator import ganchos as mod_ganchos
 from orchestrator import modelos_api
-from orchestrator.mcp_host import HostMCP, MCPNoDisponible, parametros_stdio
-from orchestrator.ollama import Ollama
+from orchestrator.mcp_host import MCPNoDisponible, crear_host
+from orchestrator.pais import crear_llm
 from orchestrator.orquestador import Orquestador, TurnoEnCurso
 
 log = logging.getLogger("centinela.api")
@@ -41,18 +41,23 @@ class AprobacionEntrada(BaseModel):
 
 
 class Preferencias(BaseModel):
-    hablar: bool
+    hablar: bool | None = None
+    modo: str | None = None   # «propio» | «pais» (modo PAIS: agente de Centinela o agente-banco de PAIS)
 
 
 def crear_orquestador(cfg: dict[str, Any] | None = None) -> Orquestador:
     cfg = cfg or config.cargar()
-    ollama = Ollama(cfg)
-    host = HostMCP(parametros_stdio(cfg))
+    ollama = crear_llm(cfg)          # Ollama local o PAIS, según `proveedor`
+    host = crear_host(cfg)           # banco-atitlan por stdio, o los servidores de mcp.servidores
     return Orquestador(cfg, ollama, host, mod_ganchos.cargar(cfg, ollama))
 
 
 def _avisar_memoria(cfg: dict[str, Any]) -> None:
     """Al arrancar: el log dice qué perfil quedó y si la selección cabe en la RAM de este equipo."""
+    if cfg.get("proveedor") == "pais":
+        log.info("modelos · PAIS (%s) · %s", (cfg.get("pais") or {}).get("url"),
+                 ", ".join(f"{rol}={m.get('nombre')}" for rol, m in cfg["modelos"].items() if m.get("nombre")))
+        return
     r = (cfg.get("seleccion_modelos") or {}).get("resuelto") or {}
     est = sel_modelos.estimar(cfg["modelos"], cfg, r.get("ram_gb"))
     nivel = logging.WARNING if est["nivel"] != "ok" or est["avisos"] else logging.INFO
@@ -131,6 +136,10 @@ def crear_app(orq: Orquestador | None = None) -> FastAPI:
         if not hablar and s.turno is not None and s.turno.locutor is not None:
             s.turno.locutor.cancelar()
 
+    def _modo(orq_: Orquestador, s: Any, modo: str) -> None:
+        if not orq_.cambiar_modo(s, modo):
+            s.bus.emitir("aviso", {"mensaje": f"Modo no disponible: {modo}.", "etapa": None})
+
     def _atender_ws(orq_: Orquestador, s: Any, msg: dict[str, Any]) -> None:
         tipo = msg.get("tipo")
         if tipo == "mensaje":
@@ -148,6 +157,8 @@ def crear_app(orq: Orquestador | None = None) -> FastAPI:
         elif tipo == "preferencias":
             if "hablar" in msg:
                 _hablar(s, bool(msg["hablar"]))
+            if "modo" in msg:
+                _modo(orq_, s, str(msg["modo"]))
         elif tipo == "ping":
             s.bus.emitir("pong", {})
         else:
@@ -209,8 +220,12 @@ def crear_app(orq: Orquestador | None = None) -> FastAPI:
 
     @app.post("/api/sesiones/{sesion_id}/preferencias")
     async def preferencias(request: Request, sesion_id: str, cuerpo: Preferencias):
-        _hablar(sesion(request, sesion_id), cuerpo.hablar)
-        return {"ok": True}
+        s = sesion(request, sesion_id)
+        if cuerpo.hablar is not None:
+            _hablar(s, cuerpo.hablar)
+        if cuerpo.modo is not None:
+            _modo(o(request), s, cuerpo.modo)
+        return {"ok": True, "modo": s.modo} if cuerpo.modo is not None else {"ok": True}
 
     @app.get("/api/sesiones/{sesion_id}/historial")
     async def historial(request: Request, sesion_id: str):

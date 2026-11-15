@@ -22,6 +22,7 @@
     <div class="demo" id="marca-demo" title="Todos los datos son ficticios">DEMO / DATOS FICTICIOS</div>
     <div class="estado-barra">
       <span class="pildora" id="estado-ws" data-estado="conectando">Conectando…</span>
+      <span class="pildora oculto" id="estado-pais" data-estado="ok" title="Los modelos corren en VMware Private AI Services, en el datacenter">Modelos: PAIS</span>
       <span class="pildora" id="estado-red" data-estado="desconocido">Red: …</span>
       <span class="pildora grande" id="estado-salientes" data-estado="desconocido">Conexiones externas: …</span>
       <button type="button" class="pildora boton-pildora" id="estado-ram" data-estado="desconocido" title="Elegir los modelos y ver si caben en la RAM">⚙ Modelos</button>
@@ -38,6 +39,7 @@
       <div class="zona-titulo">
         <h2>Conversación</h2>
         <div class="acciones-titulo">
+          <button type="button" class="boton-icono oculto" id="btn-modo" aria-pressed="false" title="Quién resuelve la pregunta: el agente de Centinela (herramientas visibles) o el agente-banco de PAIS">🧠 Agente: Centinela</button>
           <button type="button" class="boton-icono" id="btn-silencio" aria-pressed="false" title="Silenciar la voz de Centinela">🔊 Voz</button>
           <button type="button" class="boton-icono" id="btn-nueva" title="Empezar una sesión nueva">Nueva sesión</button>
         </div>
@@ -79,7 +81,7 @@
       <div class="zona-titulo"><h2>Panel de Soberanía</h2><span class="hora" id="panel-hora"></span></div>
       <div class="panel-cuerpo">
         <div class="tarjeta salientes" id="tarjeta-salientes" data-estado="desconocido">
-          <p class="etiqueta">Conexiones salientes a internet</p>
+          <p class="etiqueta" id="etiqueta-salientes">Conexiones salientes a internet</p>
           <p class="cifra" id="salientes-cifra">–</p>
           <p class="detalle" id="salientes-detalle">Midiendo con psutil…</p>
           <ul class="lista-salientes" id="salientes-lista"></ul>
@@ -100,7 +102,7 @@
 
         <!-- «Lo que no salió»: sesion.acumulado.datos_sensibles, clasificado con la política de uso de IA (§2). -->
         <div class="tarjeta sensibles" id="tarjeta-sensibles" data-estado="vacio">
-          <p class="etiqueta">Datos sensibles que no salieron del equipo</p>
+          <p class="etiqueta" id="etiqueta-sensibles">Datos sensibles que no salieron del equipo</p>
           <div class="sens-cabeza">
             <span class="sens-cifra" id="sens-total">0</span>
             <span class="detalle" id="sens-detalle">Aún no se procesan datos de clientes en esta sesión.</span>

@@ -20,6 +20,7 @@ from orchestrator.ganchos import Ganchos, disponible
 from orchestrator.mcp_host import HostMCP
 from orchestrator.memoria import Memoria
 from orchestrator.ollama import Ollama
+from orchestrator.pais import AgentePAIS
 from orchestrator.soberania.sensibles import Inventario
 
 log = logging.getLogger("centinela.orquestador")
@@ -33,8 +34,11 @@ class TurnoEnCurso(Exception):
 
 
 class Sesion:
-    def __init__(self, sesion_id: str, max_mensajes: int):
+    def __init__(self, sesion_id: str, max_mensajes: int, modo: str = "propio"):
         self.id = sesion_id
+        # «propio»: el agente de Centinela (sus herramientas MCP, aprobaciones y chips) con los modelos del
+        # proveedor. «pais»: el turno completo lo resuelve un agente de PAIS (agente-banco).
+        self.modo = modo
         self.bus = Bus(sesion_id)
         self.memoria = Memoria(max_mensajes)
         self.tarea: asyncio.Task[None] | None = None
@@ -102,8 +106,12 @@ class Audios:
 
 class Orquestador:
     def __init__(self, cfg: dict[str, Any], ollama: Ollama, host: HostMCP, ganchos: Ganchos | None = None,
-                 db: Path | None = None):
+                 db: Path | None = None, agente_pais: AgentePAIS | None = None):
         self.cfg = cfg
+        self.proveedor = str(cfg.get("proveedor") or "ollama")
+        if agente_pais is None and self.proveedor == "pais" and ((cfg.get("pais") or {}).get("agente") or {}).get("id"):
+            agente_pais = AgentePAIS(cfg)
+        self.agente_pais = agente_pais
         self.ollama = ollama
         self.host = host
         self.ganchos = ganchos or Ganchos.vacios()
@@ -115,7 +123,7 @@ class Orquestador:
         self.documentos = Documentos(config.ruta("documentos_demo"))
         self.audios = Audios()
         self.agente = Agente(self)
-        self.fecha_demo = self._leer_fecha_demo()
+        self.fecha_demo = str(cfg.get("orquestador", {}).get("fecha_demo") or "") or self._leer_fecha_demo()
         self.precalentado: dict[str, str] = {}
 
     def _leer_fecha_demo(self) -> str | None:
@@ -137,16 +145,33 @@ class Orquestador:
             raise ValueError("sesion_id inválido")
         s = self.sesiones.get(sesion_id)
         if s is None:
-            s = Sesion(sesion_id, int(self.cfg["orquestador"].get("memoria_mensajes", 40)))
+            s = Sesion(sesion_id, int(self.cfg["orquestador"].get("memoria_mensajes", 40)), self.modo_inicial)
             self.sesiones[sesion_id] = s
         return s
+
+    @property
+    def modos(self) -> list[str]:
+        return ["propio", "pais"] if self.agente_pais is not None else ["propio"]
+
+    @property
+    def modo_inicial(self) -> str:
+        modo = str(((self.cfg.get("pais") or {}).get("agente") or {}).get("modo_inicial") or "propio")
+        return modo if modo in self.modos else "propio"
+
+    def cambiar_modo(self, sesion: Sesion, modo: str) -> bool:
+        if modo not in self.modos:
+            return False
+        sesion.modo = modo
+        return True
 
     def datos_sesion_lista(self) -> dict[str, Any]:
         return {"banco": self.cfg["demo"]["banco"], "marca_demo": self.cfg["demo"]["marca_demo"],
                 "modelos": {rol: m.get("nombre") for rol, m in self.cfg["modelos"].items()},
                 "herramientas": [h.para_ui() for h in self.host.herramientas.values()],
                 "voz_disponible": disponible(self.ganchos.transcriptor) and disponible(self.ganchos.sintetizador),
-                "vision_disponible": disponible(self.ganchos.vision), "version_contrato": VERSION_CONTRATO}
+                "vision_disponible": disponible(self.ganchos.vision), "version_contrato": VERSION_CONTRATO,
+                "proveedor": self.proveedor, "modos": self.modos, "modo_inicial": self.modo_inicial,
+                "agente_pais": self.agente_pais.nombre if self.agente_pais is not None else None}
 
     def iniciar_turno(self, sesion: Sesion, texto: str, entrada: str = "texto", documento_id: str | None = None,
                       audio: tuple[bytes, str] | None = None) -> str:
@@ -193,7 +218,8 @@ class Orquestador:
             con.close()
 
     async def salud(self) -> dict[str, Any]:
-        return {"ollama": await self.ollama.version(), "mcp": self.host.conectado,
+        return {"proveedor": self.proveedor, "ollama": await self.ollama.version(), "mcp": self.host.conectado,
+                "agente_pais": self.agente_pais.agente_id if self.agente_pais is not None else None,
                 "herramientas": len(self.host.herramientas),
                 "voz": {"stt": disponible(self.ganchos.transcriptor), "tts": disponible(self.ganchos.sintetizador)},
                 "vision": disponible(self.ganchos.vision),
@@ -226,3 +252,5 @@ class Orquestador:
             self.cancelar(s)
         await self.host.cerrar()
         await self.ollama.cerrar()
+        if self.agente_pais is not None:
+            await self.agente_pais.cerrar()

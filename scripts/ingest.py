@@ -32,7 +32,7 @@ from mcp_server.rag import ESQUEMA_INDICE, a_blob, cargar_sqlite_vec, normalizar
 
 log = logging.getLogger("ingest")
 
-_CODIGO = re.compile(r"C[óo]digo:\s*([A-Z]{3}-[A-Z]{3}-\d{3})")
+_CODIGO = re.compile(r"C[óo]digo:\s*([A-Z]{2,4}(?:-[A-Z]{2,4})?-\d{3})")
 
 
 @dataclass
@@ -120,9 +120,9 @@ def construir(carpeta: Path, destino: Path, cfg: dict[str, Any], ollama: Any | N
     vectores: list[list[float]] = []
     if con_embeddings:
         if ollama is None:
-            from comun.ollama_http import ClienteOllama
+            from comun.pais import cliente_embeddings  # Ollama local o PAIS, según `proveedor`
 
-            ollama = ClienteOllama.desde_config(cfg, timeout=300)
+            ollama = cliente_embeddings(cfg, timeout=300)
         lote = int(rag.get("lote_embeddings", 16))
         for i in range(0, len(fragmentos), lote):
             grupo = fragmentos[i:i + lote]
