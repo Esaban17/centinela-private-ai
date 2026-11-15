@@ -69,6 +69,14 @@ make pais-cli PAIS=1    # o en la terminal, delegando a agente-banco
 La Mac necesita resolver `pais.vcflab.local` (10.2.20.10) y `keycloak.vcflab.local` (10.2.15.51) en `/etc/hosts`,
 y Zscaler debe dejar pasar 10.2.15.0/24 y 10.2.20.0/24.
 
+Si `make pais-probar` dice que el MCP demo-banco falla con «Connection reset by peer» (Zscaler corta el HTTP en claro
+hacia el puerto 8101, aunque `nc` conecte), use un túnel ssh en otra terminal y apunte Centinela a él:
+
+```bash
+ssh -N -L 8101:127.0.0.1:8101 pais@10.2.15.51
+echo "PAIS_MCP_URL=http://127.0.0.1:8101/mcp" >> .env
+```
+
 ## Opción B: contenedor en pais-deps
 
 ```bash

@@ -313,7 +313,10 @@ def crear_host(cfg: dict[str, Any]) -> HostMCP | HostMCPMultiple:
             if clave:
                 encabezados[str(s.get("encabezado_api_key") or "Authorization")] = \
                     f"{s.get('esquema_api_key', 'Apikey')} {clave}".strip()
-            objetivo: Any = ServidorHTTP(str(s["url"]), encabezados, float(s.get("timeout_s", 30)))
+            # `url_env`: la URL puede venir de .env (p. ej. un túnel ssh a 127.0.0.1 cuando un proxy corporativo
+            # corta el HTTP en claro hacia el puerto del MCP).
+            url = (os.environ.get(str(s["url_env"]), "").strip() if s.get("url_env") else "") or str(s["url"])
+            objetivo: Any = ServidorHTTP(url, encabezados, float(s.get("timeout_s", 30)))
         else:
             sub = {**cfg, "mcp": {**cfg.get("mcp", {}), "comando": s.get("comando", ""), "args": s.get("args", [])}}
             objetivo = parametros_stdio(sub)
