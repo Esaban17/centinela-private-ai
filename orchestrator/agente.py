@@ -21,6 +21,7 @@ from orchestrator import prompts
 from orchestrator.ganchos import GanchoNoDisponible, disponible
 from orchestrator.mcp_host import MCPNoDisponible, solicitante_actual
 from orchestrator.ollama import OllamaNoDisponible, RespuestaLLM, observador_actual
+from orchestrator.pais import PaisNoDisponible
 
 if TYPE_CHECKING:
     from orchestrator.orquestador import Orquestador, Sesion
@@ -146,7 +147,9 @@ class Agente:
 
     def _sistema(self) -> str:
         fecha = prompts.FECHA.format(fecha=self.orq.fecha_demo) if self.orq.fecha_demo else ""
-        return prompts.SISTEMA.format(banco=self.cfg["demo"]["banco"], fecha=fecha)
+        plantilla = prompts.SISTEMAS.get(str(self.cfg["orquestador"].get("prompt_sistema") or "atitlan"),
+                                         prompts.SISTEMA)
+        return plantilla.format(banco=self.cfg["demo"]["banco"], fecha=fecha)
 
     async def _con_tiempo(self, coro: Any, etapa: str, turno: Turno) -> Any:
         try:
@@ -176,7 +179,7 @@ class Agente:
                 raise ErrorTurno("mensaje_invalido", "No recibí ninguna pregunta. ¿En qué le puedo ayudar?")
 
             ruta = self.cfg["orquestador"].get("enrutamiento", {})
-            if ruta.get("clasificar_intencion", True):
+            if ruta.get("clasificar_intencion", True) and sesion.modo != "pais":
                 intencion_tarea = asyncio.create_task(self._clasificar(turno, texto, documento_id))
 
             sint = self.orq.ganchos.sintetizador
@@ -187,7 +190,7 @@ class Agente:
                 voz_tarea = asyncio.create_task(self._emitir_locutor(turno, turno.locutor))
 
             sesion.memoria.agregar({"role": "user", "content": contenido_usuario})
-            final = await self._loop(turno)
+            final = await (self._turno_pais(turno) if sesion.modo == "pais" else self._loop(turno))
 
             resumen = None
             if final and ruta.get("resumen_hablado", True) and turno.locutor is None:
@@ -206,6 +209,11 @@ class Agente:
             turno.emitir("error", {"codigo": e.codigo, "mensaje": e.mensaje, "etapa": e.etapa,
                                    "recuperable": e.recuperable})
             log.warning("turno %s · %s · %s", turno.id, e.codigo, e.mensaje)
+        except PaisNoDisponible as e:
+            log.error("PAIS: %s", e)
+            turno.emitir("error", {"codigo": "pais_no_disponible", "etapa": "llm", "recuperable": True,
+                                   "mensaje": "No pude comunicarme con los modelos de VMware Private AI Services "
+                                              f"(PAIS). {e}"})
         except OllamaNoDisponible as e:
             log.error("Ollama: %s", e)
             turno.emitir("error", {"codigo": "ollama_no_disponible", "etapa": "llm", "recuperable": True,
@@ -278,6 +286,41 @@ class Agente:
                 sesion.memoria.agregar(msg)
         raise ErrorTurno("max_iteraciones", "No logré completar la consulta en el número máximo de pasos. "
                                             "¿Puede reformularla o dividirla en partes?", "llm")
+
+    async def _turno_pais(self, turno: Turno) -> str:
+        """Modo «agente PAIS»: el agente del Agent Builder (agente-banco: MCP demo-banco + RAG politicas-banco)
+        resuelve el turno completo. La API de agentes no informa qué herramientas usó, así que no hay tarjetas de
+        herramientas: solo el chip del agente y la respuesta."""
+        ag = self.orq.agente_pais
+        if ag is None or not ag.configurado:
+            raise ErrorTurno("pais_no_configurado", "El modo agente PAIS no está configurado (pais.agente.id).", "llm")
+        sesion = turno.sesion
+        turno.iteraciones += 1
+        modelo = f"{ag.nombre} (PAIS)"
+        paso = turno.inicio("agente", modelo, "Agente de PAIS: herramientas MCP y base de conocimientos")
+        r = RespuestaLLM(rol="agente", modelo=modelo)
+        t0 = time.perf_counter()
+        try:
+            with turno.etapa("llm"):
+                res = await self._con_tiempo(ag.preguntar(sesion.memoria.para_llm(""), sesion.id), "llm", turno)
+            r.contenido = res["texto"]
+            r.tokens_entrada = int(res["uso"].get("prompt_tokens") or 0)
+            r.tokens_salida = int(res["uso"].get("completion_tokens") or 0)
+        finally:
+            r.duracion_ms = int((time.perf_counter() - t0) * 1000)
+            r.ttft_ms = r.duracion_ms if r.contenido else None
+            r.generacion_ms = r.duracion_ms
+            turno.fin(paso, r)
+        if turno.ttft_ms is None:
+            turno.ttft_ms = int((time.perf_counter() - turno.t0) * 1000)
+        if r.contenido:
+            turno.emitir("llm.delta", {"paso": turno.paso, "texto": r.contenido})
+            if turno.locutor is not None:
+                turno.locutor.alimentar(r.contenido)
+        sesion.memoria.agregar({"role": "assistant", "content": r.contenido})
+        if not r.contenido:
+            raise ErrorTurno("respuesta_vacia", "El agente de PAIS no devolvió texto. Intente de nuevo.", "llm")
+        return r.contenido
 
     async def _ejecutar_herramienta(self, turno: Turno, nombre: str, argumentos: dict[str, Any]) -> str:
         """Ejecuta una herramienta MCP y devuelve el texto que verá el modelo (los errores también le llegan,

@@ -10,6 +10,10 @@ falla al instante con `ConexionBloqueada` y queda en el log y en `bloqueos()`. T
 Se permite: loopback (127.0.0.0/8, ::1), `localhost` y sockets Unix. Todo lo demás se bloquea, incluida la red
 local, por la misma regla del monitor: para la demo, cualquier cosa fuera del equipo es «salir».
 
+Modo PAIS: los modelos están en el datacenter, así que se permiten además los destinos de
+`soberania.destinos_permitidos` (nombres exactos o redes CIDR: PAIS, Keycloak, pais-deps) y los hosts que salen de
+la sección `pais` y de `mcp.servidores`. La regla pasa a ser «nada sale del datacenter del banco».
+
     from comun import salida
     salida.instalar(cfg)          # si soberania.bloquear_salida es true (por defecto)
 
@@ -33,6 +37,9 @@ _EVENTOS_SOCKET = {"socket.connect", "socket.sendto"}       # (socket, direcció
 _EVENTOS_NOMBRE = {"socket.getaddrinfo", "socket.gethostbyname"}  # (nombre, ...)
 _NOMBRES_LOCALES = {"localhost", "localhost.localdomain", "ip6-localhost", "ip6-loopback"}
 _MAX_BLOQUEOS = 50
+
+_permitidos_nombres: set[str] = set()
+_permitidas_redes: list[ipaddress.IPv4Network | ipaddress.IPv6Network] = []
 
 _instalado = False
 _activo = False
@@ -62,6 +69,47 @@ def es_local(host: Any) -> bool:
     return addr.is_loopback
 
 
+def permitir(destinos: list[str]) -> None:
+    """Agrega destinos permitidos además del propio equipo: nombres (pais.vcflab.local) o redes (10.2.15.0/24)."""
+    for d in destinos or []:
+        d = str(d).strip().lower()
+        if not d:
+            continue
+        try:
+            _permitidas_redes.append(ipaddress.ip_network(d, strict=False))
+        except ValueError:
+            _permitidos_nombres.add(d)
+
+
+def permitidos() -> list[str]:
+    return sorted(_permitidos_nombres) + [str(r) for r in _permitidas_redes]
+
+
+def limpiar_permitidos() -> None:
+    _permitidos_nombres.clear()
+    _permitidas_redes.clear()
+
+
+def es_permitido(host: Any) -> bool:
+    """True si `host` es del equipo o de un destino permitido (modo PAIS)."""
+    if es_local(host):
+        return True
+    if isinstance(host, bytes):
+        host = host.decode("ascii", "replace")
+    if not isinstance(host, str):
+        return False
+    h = host.strip().strip("[]").split("%", 1)[0].lower().rstrip(".")
+    if h in _permitidos_nombres:
+        return True
+    try:
+        addr = ipaddress.ip_address(h)
+    except ValueError:
+        return False
+    if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped is not None:
+        addr = addr.ipv4_mapped
+    return any(addr in r for r in _permitidas_redes if r.version == addr.version)
+
+
 def _destino(evento: str, args: tuple[Any, ...]) -> tuple[Any, str] | None:
     """(host, texto) del destino de un evento de red, o None si no sale del equipo por IP."""
     if evento in _EVENTOS_NOMBRE:
@@ -85,7 +133,7 @@ def _hook(evento: str, args: tuple[Any, ...]) -> None:
     if not _activo or (evento not in _EVENTOS_SOCKET and evento not in _EVENTOS_NOMBRE):
         return
     destino = _destino(evento, args)
-    if destino is None or es_local(destino[0]):
+    if destino is None or es_permitido(destino[0]):
         return
     origen = "".join(traceback.format_stack(limit=6)[:-1]).strip().splitlines()
     registro = {"hora": time.strftime("%H:%M:%S"), "destino": destino[1], "evento": evento,
@@ -129,6 +177,16 @@ def instalar(cfg: dict[str, Any]) -> bool:
     if (cfg.get("soberania") or {}).get("bloquear_salida", True) is False:
         log.info("guardia de salida desactivada en config.yaml (soberania.bloquear_salida: false)")
         return False
+    sob = cfg.get("soberania") or {}
+    extra = list(sob.get("destinos_permitidos") or [])
+    if str(cfg.get("proveedor") or "").lower() == "pais":
+        from comun import pais
+
+        extra += pais.destinos(cfg)
+    permitir(extra)
     activar()
-    log.info("guardia de salida activa: solo se permiten conexiones a este equipo")
+    if extra:
+        log.info("guardia de salida activa: solo este equipo y el datacenter (%s)", ", ".join(permitidos()))
+    else:
+        log.info("guardia de salida activa: solo se permiten conexiones a este equipo")
     return True

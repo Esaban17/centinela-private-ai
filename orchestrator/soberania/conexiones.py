@@ -13,6 +13,9 @@ demo, cualquier cosa fuera del equipo es "salir".
 En macOS `psutil.net_connections()` global requiere root, por eso se consulta por PID
 (los procesos de la demo corren con el mismo usuario). Ver docs/DECISIONES.md §3.7.
 
+Modo PAIS: las conexiones a destinos permitidos (PAIS, Keycloak, pais-deps: `soberania.destinos_permitidos`) se
+cuentan aparte, en `datacenter`, y no como salientes: los modelos viven ahí. Lo demás sigue siendo «salir».
+
 Nunca abre conexiones: solo observa.
 """
 
@@ -21,6 +24,7 @@ from __future__ import annotations
 import ipaddress
 import os
 import socket
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 
 import psutil
@@ -42,6 +46,7 @@ class ResultadoConexiones:
     procesos: list[dict] = field(default_factory=list)      # procesos vigilados
     sin_permiso: list[dict] = field(default_factory=list)   # procesos que no se pudieron revisar
     loopback: int = 0                                        # conexiones locales observadas (informativo)
+    datacenter: list[Conexion] = field(default_factory=list)  # modo PAIS: a destinos permitidos
 
     @property
     def total_salientes(self) -> int:
@@ -54,6 +59,8 @@ class ResultadoConexiones:
             "procesos": self.procesos,
             "sin_permiso": self.sin_permiso,
             "loopback": self.loopback,
+            "datacenter": len(self.datacenter),
+            "detalle_datacenter": [asdict(c) for c in self.datacenter],
         }
 
 
@@ -97,8 +104,9 @@ def procesos_demo(nombres: list[str], pid_raiz: int | None = None) -> dict[int, 
     return vigilados
 
 
-def revisar(nombres: list[str], pid_raiz: int | None = None) -> ResultadoConexiones:
-    """Inspecciona las conexiones inet de los procesos de la demo."""
+def revisar(nombres: list[str], pid_raiz: int | None = None,
+            permitido: Callable[[str], bool] | None = None) -> ResultadoConexiones:
+    """Inspecciona las conexiones inet de los procesos de la demo. `permitido(ip)`: destinos del datacenter."""
     res = ResultadoConexiones()
     for pid, proc in sorted(procesos_demo(nombres, pid_raiz).items()):
         try:
@@ -116,14 +124,18 @@ def revisar(nombres: list[str], pid_raiz: int | None = None) -> ResultadoConexio
             if es_loopback(c.raddr.ip):
                 res.loopback += 1
                 continue
-            res.salientes.append(Conexion(
+            conexion = Conexion(
                 pid=pid,
                 proceso=nombre,
                 local=_fmt(c.laddr),
                 remoto=_fmt(c.raddr),
                 estado=c.status or "",
                 protocolo="tcp" if c.type == socket.SOCK_STREAM else "udp",
-            ))
+            )
+            if permitido is not None and permitido(c.raddr.ip):
+                res.datacenter.append(conexion)
+            else:
+                res.salientes.append(conexion)
     return res
 
 

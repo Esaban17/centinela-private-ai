@@ -8,7 +8,11 @@ CENTINELA__<seccion>__<clave>[__<subclave>...], por ejemplo:
 
 Los valores de entorno se interpretan como YAML (números, booleanos, null).
 
-Orden: config.yaml → config.local.yaml (si existe; lo escribe la UI al elegir modelos, no se versiona) →
+Proveedor de modelos: `proveedor: ollama` (por defecto, todo en la Mac) o `pais` (VMware Private AI Services en el
+datacenter). Con `pais` (o `CENTINELA_PROVEEDOR=pais`) se aplica además config.pais.yaml justo después de
+config.yaml, y no se elige perfil por RAM (los modelos no corren en este equipo).
+
+Orden: config.yaml → [config.pais.yaml] → config.local.yaml (si existe; lo escribe la UI al elegir modelos, no se versiona) →
 variables de entorno → perfil de modelos según la RAM (`comun.modelos`) → variables de entorno otra vez, para que
 `CENTINELA__modelos__...` siga ganándole al perfil. `CENTINELA_CONFIG_LOCAL` cambia la ruta del archivo local
 ("" lo apaga).
@@ -71,10 +75,18 @@ def cargar() -> dict[str, Any]:
     ruta = Path(os.environ.get("CENTINELA_CONFIG", RAIZ / "config.yaml"))
     cfg = yaml.safe_load(ruta.read_text(encoding="utf-8")) or {}
     local = ruta_local()
-    if local is not None and local.exists():
-        _fusionar(cfg, yaml.safe_load(local.read_text(encoding="utf-8")) or {})
+    datos_local = (yaml.safe_load(local.read_text(encoding="utf-8")) or {}) if local is not None and local.exists() \
+        else {}
+    proveedor = (os.environ.get("CENTINELA_PROVEEDOR") or os.environ.get(f"{PREFIJO}proveedor")
+                 or datos_local.get("proveedor") or cfg.get("proveedor") or "ollama").strip().lower()
+    if proveedor == "pais":
+        ruta_pais = Path(os.environ.get("CENTINELA_CONFIG_PAIS", RAIZ / "config.pais.yaml"))
+        if ruta_pais.exists():
+            _fusionar(cfg, yaml.safe_load(ruta_pais.read_text(encoding="utf-8")) or {})
+    _fusionar(cfg, datos_local)
+    cfg["proveedor"] = proveedor
     _aplicar_entorno(cfg)
-    if cfg.get("seleccion_modelos"):
+    if cfg.get("seleccion_modelos") and proveedor != "pais":
         from comun import modelos
 
         modelos.aplicar_perfil(cfg)

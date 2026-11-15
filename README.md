@@ -10,6 +10,18 @@ Las decisiones de modelos, el presupuesto de memoria y los ajustes a la arquitec
 [docs/DECISIONES.md](docs/DECISIONES.md). El guion del escenario, el plan B y el video de respaldo, en
 [GUION.md](GUION.md).
 
+## Modo PAIS: los modelos en VMware Private AI Services
+
+Con `CENTINELA_PROVEEDOR=pais` la misma app usa los modelos servidos por **PAIS 3.0** en el datacenter (VCF 9.1.1)
+en lugar de Ollama: `llama-3.1-8b` para el agente, `bge-m3` para el RAG, los datos del **MCP demo-banco** y las
+políticas de crédito del Banco Demo GQ. Un botón alterna entre el agente de Centinela y el `agente-banco` del
+Agent Builder de PAIS. Guía completa, prerrequisitos y despliegue en pais-deps: [docs/PAIS.md](docs/PAIS.md).
+
+```bash
+cp .env.pais.example .env && chmod 600 .env   # credenciales del usuario de servicio y clave del MCP
+make pais-probar && make pais-ingest && make pais-run
+```
+
 ## Instalación desde cero (Mac Apple Silicon, 24 GB o más)
 
 Requiere internet **una sola vez** (Homebrew, Python, los modelos). Después todo corre sin red.

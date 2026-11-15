@@ -1,0 +1,126 @@
+# Centinela sobre VMware Private AI Services (PAIS 3.0) — GQ LAB, VCF 9.1.1.
+# DEMO / DATOS FICTICIOS. Se aplica encima de config.yaml cuando `proveedor: pais` o CENTINELA_PROVEEDOR=pais.
+# Las listas (guion, mcp.servidores) reemplazan a las de config.yaml; los diccionarios se fusionan.
+# Credenciales: SOLO en .env (ver .env.pais.example), nunca aquí.
+
+proveedor: pais
+
+demo:
+  banco: "Banco Demo GQ (ficticio)"
+
+pais:
+  url: "https://pais.vcflab.local"           # ingress de PAIS (10.2.20.10)
+  ca: ""                                    # ruta al bundle de la CA del lab; vacío + verificar_tls false = sin verificar
+  verificar_tls: false                      # el certificado del lab no es de una CA pública
+  timeout_s: 300                            # Llama 3.1 8B en CPU puede tardar minutos
+  stream: true                              # SSE; si PAIS no lo soporta, el cliente acepta también la respuesta entera
+  json_schema: true                         # response_format json_schema (llama.cpp lo soporta); false = solo por prompt
+  keycloak:
+    url_token: "https://keycloak.vcflab.local:8443/realms/lab/protocol/openid-connect/token"
+    client_id: "pais"                       # client con «Direct access grants» activado
+    usuario: "app-centinela"                # usuario de servicio en el grupo pais-users (clave en PAIS_KC_CLAVE)
+  agente:                                   # modo «agente PAIS»: el turno lo resuelve el Agent Builder
+    id: "7543e0a3-1cfe-4874-b85e-fd7c9ce3fe09"   # agente-banco (MCP demo-banco + RAG politicas-banco)
+    nombre: "agente-banco"
+    historial_mensajes: 1                   # con el 8B, más historial lo hace repetir respuestas anteriores
+    temperatura: 0.01
+    modo_inicial: "propio"                  # propio | pais (el botón de la UI cambia entre los dos)
+
+# routingName de cada ModelEndpoint (pais-3.0/03 y 04): es el `model` de la API OpenAI-compatible.
+modelos:
+  agente:
+    nombre: "llama-3.1-8b"
+    temperatura: 0.1
+    max_tokens: 1024
+  rapido:
+    nombre: "llama-3.1-8b"                  # el mismo endpoint: no hay modelo rápido aparte en el lab
+    temperatura: 0.0
+    max_tokens: 200
+  vision:
+    nombre: ""                              # sin GPU no hay modelo de visión en PAIS
+  embeddings:
+    nombre: "bge-m3"                        # Infinity en CPU (bge-m3-cpu)
+  stt:
+    motor: "auto"                           # en el contenedor (Linux) = faster-whisper en CPU
+    nombre_faster: "small"                  # CPU: «small» responde en ~2 s; «large-v3-turbo» es mejor pero más lento
+  tts:
+    respaldo: "ninguno"                     # `say` solo existe en macOS
+
+vision:
+  habilitada: false
+
+rutas:
+  politicas: "data/politicas_pais"          # las 4 políticas de rag-banco (POL-CR-001, POL-CR-002, NR-005, GE-010)
+  vectores: "data/vectores/politicas_pais.db"
+
+mcp:
+  servidores:
+    # Datos del banco: el mismo MCP que usa agente-banco (Postgres en pais-deps, solo lectura).
+    - nombre: "demo-banco"
+      transporte: "http"
+      url: "http://10.2.15.51:8101/mcp"
+      api_key_env: "PAIS_MCP_API_KEY"       # la clave de mcp-demo/.env en pais-deps
+      encabezado_api_key: "Authorization"
+      esquema_api_key: "Apikey"
+      solo_lectura: true
+      # Pocas herramientas: con Llama 3.1 8B, 12 herramientas daban «Parsing inference server response failed».
+      herramientas: [evaluar_solicitud_credito, perfil_crediticio, buscar_cliente, resumen_cartera_mora,
+                     alertas_fraude_abiertas]
+    # Políticas: el RAG híbrido de Centinela (sqlite-vec + FTS5) con los embeddings bge-m3 de PAIS.
+    - nombre: "politicas"
+      transporte: "stdio"
+      herramientas: [buscar_politicas]
+
+orquestador:
+  host: "127.0.0.1"                         # en la Mac; el contenedor de pais-deps lo cambia a 0.0.0.0
+  prompt_sistema: "pais"
+  fecha_demo: "2026-11-12"                  # la fecha de referencia de las bases de mcp-demo
+  max_iteraciones: 4
+  memoria_mensajes: 8                       # contexto de 8192 tokens en el ModelEndpoint
+  max_caracteres_resultado: 3000
+  precalentar_al_arrancar: true
+  timeouts_s:
+    llm: 300
+    herramienta: 30
+    intencion: 60
+    resumen: 60
+  enrutamiento:                             # un solo endpoint en CPU con --parallel 1: sin llamadas extra
+    clasificar_intencion: false
+    titulo_ticket_rapido: false
+    resumen_hablado: false
+
+voz:
+  modo_habla: "resumen"                     # la respuesta llega entera; se lee el inicio
+
+guion:
+  - id: credito_fraude
+    titulo: "Crédito: CLI-00119"
+    pregunta: "¿El cliente CLI-00119 califica para un préstamo personal de Q50,000?"
+    herramientas_esperadas: [evaluar_solicitud_credito]
+    respuesta_contiene: ["SUSPENDIDO"]
+  - id: credito_condiciones
+    titulo: "Crédito: CLI-00142"
+    pregunta: "¿El cliente CLI-00142 califica para un préstamo de vehículo de Q300,000?"
+    herramientas_esperadas: [evaluar_solicitud_credito]
+    respuesta_contiene: ["CONDICIONES"]
+  - id: politica
+    titulo: "Política de fraude"
+    pregunta: "¿Qué dice la política sobre clientes con alertas de fraude?"
+    herramientas_esperadas: [buscar_politicas]
+  - id: mora
+    titulo: "Mora de la cartera"
+    pregunta: "¿Cómo está la mora de la cartera?"
+    herramientas_esperadas: [resumen_cartera_mora]
+  - id: fraude
+    titulo: "Alertas de fraude"
+    pregunta: "¿Qué alertas de fraude están abiertas?"
+    herramientas_esperadas: [alertas_fraude_abiertas]
+
+soberania:
+  procesos: []                              # no hay Ollama en este equipo
+  # Destinos del datacenter: mgmt (pais-deps, Keycloak) y las IP externas del Supervisor (PAIS 10.2.20.10).
+  # A los nombres de `pais` y `mcp.servidores` se les suma esto. Todo lo demás sigue bloqueado.
+  destinos_permitidos: ["10.2.15.0/24", "10.2.20.0/24", "pais.vcflab.local", "keycloak.vcflab.local"]
+
+costos:
+  referencia: "Claude Opus 5.5 (precio de lista, oct. 2026) · los modelos corren en PAIS: costo marginal Q0.00"

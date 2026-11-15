@@ -59,7 +59,12 @@ export class Panel {
     const bloqueadas = c.bloqueadas || [];
     if (c.guardia_activa) $('salientes-detalle').textContent += ` · guardia de salida activa${bloqueadas.length ? ` (${bloqueadas.length} intentos bloqueados)` : ''}`;
     $('salientes-lista').append(...bloqueadas.slice(-3).map((b) => el('li', {}, `bloqueado → ${b.destino}`)));
-    pill('estado-salientes', ok ? 'ok' : 'alerta', `Conexiones externas: ${c.salientes}`);
+    // Modo PAIS: las conexiones a PAIS, Keycloak y pais-deps se cuentan aparte (no salen del datacenter).
+    if (c.datacenter !== undefined && s.proveedor === 'pais') {
+      $('salientes-detalle').textContent += ` · ${c.datacenter} al datacenter (PAIS, Keycloak, MCP)`;
+      $('salientes-lista').append(...(c.detalle_datacenter || []).slice(0, 3).map((x) => el('li', { class: 'tenue' }, `datacenter → ${x.remoto}`)));
+    }
+    pill('estado-salientes', ok ? 'ok' : 'alerta', `${s.proveedor === 'pais' ? 'Fuera del datacenter' : 'Conexiones externas'}: ${c.salientes}`);
 
     // Red del equipo
     const online = s.red.online;
@@ -126,7 +131,7 @@ export class Panel {
     $('a-docs').textContent = num(a.documentos_analizados || 0);
     const usados = a.modelos_usados || [];
     $('a-modelos').textContent = num(usados.length);
-    const rolDe = Object.fromEntries(Object.entries(this.modelosPorRol).map(([rol, nombre]) => [nombre, rol]));
+    const rolDe = Object.fromEntries(Object.entries(this.modelosPorRol).reverse().map(([rol, nombre]) => [nombre, rol]));
     $('a-lista-modelos').replaceChildren(...usados.map((m) => el('span', { class: 'chip', dataset: { rol: rolDe[m] || '' }, title: m },
       rolDe[m] ? el('b', {}, `${ROLES[rolDe[m]]} · `) : null, m)));
     this.sensibles(a.datos_sensibles);

@@ -4,7 +4,8 @@ OFFLINE := HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 HF_HUB_DISABLE_TELEMETRY=1 AN
 INSPECTOR_VERSION ?= 2.11.0
 
 .PHONY: help setup setup-mac seed ingest documentos vision mcp inspector test pull-models ui-sim voz-modelos voces voz-prueba \
-        modelos ollama demo run cli logs warmup ensayo medir check-offline reset
+        modelos ollama demo run cli logs warmup ensayo medir check-offline reset \
+        pais-probar pais-ingest pais-run pais-cli
 
 help:
 	@echo "── El día de la demo (ver GUION.md) ──"
@@ -15,6 +16,11 @@ help:
 	@echo "make logs         Sigue el log del orquestador (terminal secundaria)"
 	@echo "make reset        Base y documentos demo como nuevos (borra los tickets de los ensayos)"
 	@echo "make ollama       ollama serve con las variables de config.yaml (solo 127.0.0.1, sin vencimiento)"
+	@echo "── Modo PAIS (modelos en VMware Private AI Services, ver docs/PAIS.md) ──"
+	@echo "make pais-probar  Diagnóstico: token, modelos, herramientas, embeddings, MCP demo-banco y agente-banco"
+	@echo "make pais-ingest  Indexa las políticas del Banco Demo GQ con bge-m3 de PAIS"
+	@echo "make pais-run     Orquestador y UI con los modelos de PAIS"
+	@echo "make pais-cli     Conversa en la terminal (PAIS=1 delega cada turno a agente-banco)"
 	@echo "── Instalación y desarrollo ──"
 	@echo "make setup-mac    Instalación desde cero en una Mac (requiere internet una vez; LIMITE_GPU=1 sube el límite de GPU)"
 	@echo "make setup        Crea .venv (Python 3.12) e instala dependencias"
@@ -110,3 +116,20 @@ check-offline:
 	$(OFFLINE) $(PY) -m scripts.check_offline $(if $(ESTRICTO),--estricto,)
 
 reset: seed documentos
+
+# ── Modo PAIS ──
+PAIS_ENV := CENTINELA_PROVEEDOR=pais
+
+pais-probar:
+	$(PAIS_ENV) $(PY) -m scripts.probar_pais --ambos
+
+pais-ingest:
+	$(PAIS_ENV) $(PY) -m scripts.ingest
+
+pais-run:
+	@[ -f data/banco.db ] || $(MAKE) seed
+	@[ -f data/vectores/politicas_pais.db ] || $(MAKE) pais-ingest
+	$(OFFLINE) $(PAIS_ENV) $(PY) -m orchestrator
+
+pais-cli:
+	$(OFFLINE) $(PAIS_ENV) $(PY) -m orchestrator.cli $(if $(PAIS),--pais,)

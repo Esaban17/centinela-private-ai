@@ -28,6 +28,8 @@ const selector = new SelectorModelos();
 const reproductor = new Reproductor();
 let enCurso = false;
 let conexion;
+let proveedor = 'ollama';
+let modo = 'propio';
 
 function marcarEnCurso(v) {
   enCurso = v;
@@ -42,6 +44,7 @@ function alEvento(ev) {
     case 'sesion.lista':
       if (d.banco) $('banco').textContent = `${d.banco} · Asistente de operaciones con IA privada${d.simulador ? ' · SIMULADOR' : ''}`;
       if (d.marca_demo) $('marca-demo').textContent = d.marca_demo;
+      aplicarProveedor(d);
       break;
     case 'turno.inicio':
     case 'transcripcion':
@@ -60,8 +63,48 @@ function alEvento(ev) {
   conversacion.evento(ev);
   visor.evento(ev);
   panel.evento(ev);
-  selector.evento(ev);
+  if (proveedor !== 'pais') selector.evento(ev);   // en PAIS los modelos no ocupan la RAM de este equipo
 }
+
+// ─── Modo PAIS: modelos en el datacenter y botón «agente Centinela / agente PAIS» ───
+const btnModo = $('btn-modo');
+function aplicarProveedor(d) {
+  proveedor = d.proveedor || 'ollama';
+  const enPais = proveedor === 'pais';
+  document.body.classList.toggle('modo-pais', enPais);
+  if (enPais) {
+    $('etiqueta-sensibles').textContent = 'Datos sensibles que no salieron del datacenter';
+    $('etiqueta-salientes').textContent = 'Conexiones fuera del datacenter';
+  }
+  $('estado-pais').classList.toggle('oculto', !enPais);
+  $('estado-ram').classList.toggle('oculto', enPais);
+  if (enPais) $('aviso-ram').classList.add('oculto');
+  const modos = d.modos || ['propio'];
+  btnModo.classList.toggle('oculto', !modos.includes('pais'));
+  if (modos.includes('pais')) {
+    const guardado = almacenar('centinela.modo');
+    aplicarModo(modos.includes(guardado) ? guardado : (d.modo_inicial || 'propio'), d.agente_pais);
+  }
+}
+function aplicarModo(m, nombreAgente) {
+  modo = m;
+  if (nombreAgente) btnModo.dataset.agente = nombreAgente;
+  btnModo.setAttribute('aria-pressed', String(m === 'pais'));
+  btnModo.textContent = m === 'pais' ? `🧠 Agente: ${btnModo.dataset.agente || 'PAIS'} (PAIS)` : '🧠 Agente: Centinela';
+  almacenar('centinela.modo', m === 'propio' ? null : m);
+  if (conexion && !conexion.enviar({ tipo: 'preferencias', modo: m })) {
+    pedir(`/api/sesiones/${encodeURIComponent(sesionId)}/preferencias`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ modo: m }),
+    }).catch(() => { /* se reenvía al reconectar */ });
+  }
+}
+btnModo.addEventListener('click', () => {
+  if (enCurso) return conversacion.nota('Espere a que termine la respuesta en curso.', 'aviso');
+  aplicarModo(modo === 'pais' ? 'propio' : 'pais');
+  conversacion.nota(modo === 'pais'
+    ? 'Ahora responde el agente de PAIS: él elige las herramientas y la base de conocimientos.'
+    : 'Ahora responde el agente de Centinela con los modelos de PAIS: verá cada herramienta que use.', 'aviso');
+});
 
 function conectar() {
   conexion?.cerrar();

@@ -108,9 +108,9 @@ class IndicePoliticas:
     @property
     def ollama(self) -> Any:
         if self._ollama is None:
-            from comun.ollama_http import ClienteOllama
+            from comun.pais import cliente_embeddings  # Ollama local o PAIS, según `proveedor`
 
-            self._ollama = ClienteOllama.desde_config(self.cfg, timeout=float(self.rag.get("timeout_embeddings_s", 10)))
+            self._ollama = cliente_embeddings(self.cfg, timeout=float(self.rag.get("timeout_embeddings_s", 10)))
         return self._ollama
 
     def _abrir(self) -> sqlite3.Connection | None:
