@@ -59,6 +59,7 @@ mcp:
     - nombre: "demo-banco"
       transporte: "http"
       url: "http://10.2.15.51:8101/mcp"
+      url_env: "PAIS_MCP_URL"               # si está en .env, gana (túnel: http://127.0.0.1:8101/mcp)
       api_key_env: "PAIS_MCP_API_KEY"       # la clave de mcp-demo/.env en pais-deps
       encabezado_api_key: "Authorization"
       esquema_api_key: "Apikey"

@@ -97,6 +97,18 @@ def parametros_stdio(cfg: dict[str, Any]) -> StdioServerParameters:
     return StdioServerParameters(command=comando, args=list(args), cwd=str(RAIZ), env=dict(os.environ))
 
 
+def causa_real(e: BaseException) -> str:
+    """anyio envuelve el error verdadero en ExceptionGroup («unhandled errors in a TaskGroup»): se desenvuelve
+    para que el panel y `make pais-probar` muestren la causa (401, conexión rechazada, etc.)."""
+    while isinstance(e, BaseExceptionGroup) and e.exceptions:
+        e = e.exceptions[0]
+    texto = str(e) or type(e).__name__
+    resp = getattr(e, "response", None)
+    if resp is not None and getattr(resp, "status_code", None):
+        texto = f"HTTP {resp.status_code} en {getattr(resp, 'url', '')}: {texto}"
+    return f"{type(e).__name__}: {texto}"
+
+
 class HostMCP:
     def __init__(self, objetivo: Any, modo: str = "auto", nombre_cliente: str = "centinela-orquestador",
                  permitidas: list[str] | None = None, nombre: str = "", solo_lectura: bool = False):
@@ -142,7 +154,7 @@ class HostMCP:
         except Exception as e:
             await pila.aclose()
             self.cliente = None
-            raise MCPNoDisponible(f"No se pudo iniciar el servidor MCP: {e}") from e
+            raise MCPNoDisponible(f"No se pudo iniciar el servidor MCP: {causa_real(e)}") from e
         self._pila = pila
         log.info("MCP %sconectado: %d herramientas (%s)", f"{self.nombre} " if self.nombre else "",
                  len(self.herramientas), ", ".join(self.herramientas))
@@ -301,7 +313,10 @@ def crear_host(cfg: dict[str, Any]) -> HostMCP | HostMCPMultiple:
             if clave:
                 encabezados[str(s.get("encabezado_api_key") or "Authorization")] = \
                     f"{s.get('esquema_api_key', 'Apikey')} {clave}".strip()
-            objetivo: Any = ServidorHTTP(str(s["url"]), encabezados, float(s.get("timeout_s", 30)))
+            # `url_env`: la URL puede venir de .env (p. ej. un túnel ssh a 127.0.0.1 cuando un proxy corporativo
+            # corta el HTTP en claro hacia el puerto del MCP).
+            url = (os.environ.get(str(s["url_env"]), "").strip() if s.get("url_env") else "") or str(s["url"])
+            objetivo: Any = ServidorHTTP(url, encabezados, float(s.get("timeout_s", 30)))
         else:
             sub = {**cfg, "mcp": {**cfg.get("mcp", {}), "comando": s.get("comando", ""), "args": s.get("args", [])}}
             objetivo = parametros_stdio(sub)
