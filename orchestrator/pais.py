@@ -34,8 +34,18 @@ class PaisNoDisponible(OllamaNoDisponible):
     """PAIS no respondió o respondió con error (servicio caído, token inválido, modelo inexistente)."""
 
 
-def a_openai(mensajes: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Mensajes de la memoria de Centinela (formato Ollama) → formato OpenAI."""
+RECORDATORIO_HERRAMIENTAS = (
+    "Arriba están los resultados de {nombres}. Respóndale ahora al ejecutivo con esos datos concretos: copie el "
+    "dictamen, los montos, tasas, motivos y códigos tal como aparecen. No mencione herramientas, funciones ni el "
+    "formato de la respuesta. No vuelva a llamar una herramienta que ya respondió.")
+
+
+def a_openai(mensajes: list[dict[str, Any]], recordatorio: bool = False) -> list[dict[str, Any]]:
+    """Mensajes de la memoria de Centinela (formato Ollama) → formato OpenAI.
+
+    `recordatorio`: si la conversación termina en resultados de herramientas, se agrega un mensaje de usuario que
+    pide comunicar los datos. Llama 3.1 8B, sin él, suele responder «La respuesta es el dictamen que devuelve la
+    herramienta» en vez de dar el dictamen, o vuelve a llamar la misma herramienta."""
     salida: list[dict[str, Any]] = []
     pendientes: list[str] = []  # ids de tool_calls sin respuesta, en orden
     for m in mensajes:
@@ -62,6 +72,15 @@ def a_openai(mensajes: list[dict[str, Any]]) -> list[dict[str, Any]]:
             salida.append({"role": rol, "content": partes})
         else:
             salida.append({"role": rol, "content": m.get("content") or ""})
+    if recordatorio and salida and salida[-1]["role"] == "tool":
+        nombres: list[str] = []
+        for m in reversed(mensajes):
+            if m.get("role") != "tool":
+                break
+            n = str(m.get("tool_name") or "la herramienta")
+            if n not in nombres:
+                nombres.insert(0, n)
+        salida.append({"role": "user", "content": RECORDATORIO_HERRAMIENTAS.format(nombres=", ".join(nombres))})
     return salida
 
 
@@ -114,6 +133,7 @@ class PaisLLM(_Cliente):
         p = cpais.seccion(cfg)
         self.stream = bool(p.get("stream", True))
         self.json_schema = bool(p.get("json_schema", True))
+        self.recordatorio = bool(p.get("recordatorio_herramientas", True))
 
     def modelo(self, rol: str) -> str:
         return self.cfg["modelos"][rol]["nombre"]
@@ -121,7 +141,8 @@ class PaisLLM(_Cliente):
     def _cuerpo(self, rol: str, mensajes: list[dict[str, Any]], herramientas: list[dict[str, Any]] | None,
                 formato: dict[str, Any] | str | None, opciones: dict[str, Any] | None) -> dict[str, Any]:
         m = self.cfg["modelos"].get(rol, {})
-        cuerpo: dict[str, Any] = {"model": self.modelo(rol), "messages": a_openai(mensajes), "stream": self.stream}
+        cuerpo: dict[str, Any] = {"model": self.modelo(rol), "messages": a_openai(mensajes, self.recordatorio),
+                                "stream": self.stream}
         if self.stream:
             cuerpo["stream_options"] = {"include_usage": True}
         op = opciones or {}

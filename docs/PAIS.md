@@ -115,6 +115,12 @@ Haga la misma pregunta en los dos modos para comparar tiempos y respuestas.
 - Pocas herramientas (5 + `buscar_politicas`): con 12, el 8B daba «Parsing inference server response failed».
 - El dictamen de crédito lo decide `evaluar_solicitud_credito` (reglas deterministas); el modelo solo lo comunica.
 - `memoria_mensajes: 8` y resultados de herramienta de hasta 3,000 caracteres: el contexto del endpoint es 8192.
+- Tras una herramienta, el 8B a veces responde «La respuesta es el dictamen que devuelve la herramienta» en vez de
+  darlo. `pais.recordatorio_herramientas` le agrega un mensaje que pide los datos concretos y, si aun así responde
+  así, `orquestador.respaldo_respuesta_meta` muestra el resultado de la herramienta debajo.
+- Si el modo agente PAIS hace lo mismo, agregue al final de las instrucciones de `agente-banco` en el Agent Builder:
+  «Después de usar una herramienta, responda con los datos que devolvió: el dictamen, el monto, la tasa, los motivos
+  y los códigos de política. Nunca diga que la respuesta la devuelve una herramienta o una función.»
 - Timeouts de 300 s: en CPU una respuesta con herramientas puede tardar uno o dos minutos.
 
 ## Seguridad

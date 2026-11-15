@@ -28,6 +28,16 @@ if TYPE_CHECKING:
 
 log = logging.getLogger("centinela.agente")
 
+# Respuestas «meta» de un modelo chico tras una herramienta: hablan de la herramienta en vez de dar el dato.
+_META = re.compile(r"\b(herramienta|funci[óo]n|evaluar_solicitud_credito|la respuesta (anterior )?es)\b", re.I)
+
+
+def respuesta_meta(texto: str) -> bool:
+    """True si la respuesta describe la herramienta sin dar datos (sin cifras ni dictamen)."""
+    t = texto.strip()
+    return bool(t) and len(t) < 400 and bool(_META.search(t)) and not re.search(r"\d|DICTAMEN|APROBADO|RECHAZADO|"
+                                                                                r"SUSPENDIDO", t)
+
 ETAPAS = ("stt", "vision", "intencion", "llm", "herramientas", "aprobacion", "resumen", "tts")
 
 
@@ -269,6 +279,9 @@ class Agente:
             if turno.locutor is not None:
                 turno.locutor.alimentar(texto)
 
+        ultimo_resultado = ""
+        respaldo = bool(self.cfg.get("orquestador", {}).get("respaldo_respuesta_meta",
+                                                             self.cfg.get("proveedor") == "pais"))
         while turno.iteraciones < max_iter:
             turno.iteraciones += 1
             with turno.etapa("llm"):
@@ -277,9 +290,17 @@ class Agente:
                                          al_recibir=delta, tarea="Razonar y usar herramientas"), "llm", turno)
             sesion.memoria.agregar(r.mensaje())
             if not r.llamadas:
-                return r.contenido.strip()
+                texto = r.contenido.strip()
+                if respaldo and ultimo_resultado and respuesta_meta(texto):
+                    # El 8B describió la herramienta en vez de comunicar el resultado: se muestra el resultado.
+                    log.info("turno %s · respuesta meta del modelo; se muestra el resultado de la herramienta", turno.id)
+                    extra = "\n\n" + ultimo_resultado[:1500]
+                    await delta(extra)
+                    texto += extra
+                return texto
             for llamada in r.llamadas:
                 resultado = await self._ejecutar_herramienta(turno, llamada.nombre, llamada.argumentos)
+                ultimo_resultado = str(resultado or "").strip()
                 msg = {"role": "tool", "tool_name": llamada.nombre, "content": resultado}
                 if llamada.id:
                     msg["tool_call_id"] = llamada.id
