@@ -37,13 +37,42 @@ NIVELES: dict[str, tuple[str, list[tuple[str, str, str]]]] = {
     ]),
 }
 
-_CLIENTE = re.compile(r"\bCLI-\d{4}\b")
+_CLIENTE = re.compile(r"\bCLI-\d{4,5}\b")   # 4 dígitos en banco-atitlan, 5 en el MCP demo-banco de PAIS
+# Resultados de texto (MCP demo-banco: tablas Markdown y el dictamen de evaluar_solicitud_credito).
+_NOMBRE_TXT = re.compile(r"Cliente:\s*([^\n(|]+?)\s*\(CLI-\d{4,5}\)")
+_QUETZALES = re.compile(r"\bQ\s?((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?)")
+_NUMERO = re.compile(r"^-?\d+(?:\.\d+)?$")
+# Columnas de las tablas de demo-banco con número de cuenta, tarjeta o préstamo.
+_CLAVES_CUENTA = {"cuenta", "referencia", "numero_cuenta", "tarjeta"}
 _CUENTA = re.compile(r"\bAT-\d{5}-\d{2}\b")
 # Claves que guardan el nombre de una persona (en documentos y resultados de validación).
-_CLAVES_NOMBRE = {"titular", "depositante", "solicitante", "cliente_nombre", "nombre_titular"}
+_CLAVES_NOMBRE = {"titular", "depositante", "solicitante", "cliente_nombre", "nombre_titular", "cliente"}
 # Claves con montos de dinero de clientes.
 _CLAVES_MONTO = {"saldo", "monto", "monto_total", "monto_efectivo", "monto_cheques", "monto_solicitado", "total",
                  "total_gtq", "saldo_promedio_declarado", "ingreso_mensual_declarado"}
+
+
+def _es_monto(clave: str | None) -> bool:
+    return bool(clave) and (clave in _CLAVES_MONTO or clave.startswith(("saldo", "monto")))
+
+
+def tabla_markdown(texto: str) -> list[dict[str, Any]]:
+    """Filas de las tablas Markdown de un resultado de texto, con los números convertidos."""
+    filas: list[dict[str, Any]] = []
+    columnas: list[str] | None = None
+    for linea in texto.splitlines():
+        linea = linea.strip()
+        if not (linea.startswith("|") and linea.endswith("|")):
+            columnas = None
+            continue
+        celdas = [c.strip() for c in linea.strip("|").split("|")]
+        if columnas is None:
+            columnas = [c.casefold() for c in celdas]
+        elif all(set(c) <= set("-: ") for c in celdas):
+            continue
+        else:
+            filas.append({k: (float(v) if _NUMERO.match(v) else v) for k, v in zip(columnas, celdas)})
+    return filas
 
 
 def _norm(texto: str) -> str:
@@ -69,6 +98,8 @@ class Inventario:
     def herramienta(self, nombre: str, argumentos: dict[str, Any] | None, resultado: Any) -> None:
         """Resultado (y argumentos) de una herramienta MCP: lo que el modelo leyó y escribió."""
         self._recorrer(argumentos or {}, None)
+        if isinstance(resultado, str):
+            self._texto(resultado)
         self._recorrer(resultado, None)
         if not isinstance(resultado, dict):
             return
@@ -93,6 +124,15 @@ class Inventario:
 
     # ─── Recorrido de resultados ───
 
+    def _texto(self, texto: str) -> None:
+        """Resultados en texto: tablas Markdown (se recorren como filas) y el dictamen de crédito."""
+        for fila in tabla_markdown(texto):
+            self._recorrer(fila, None)
+        for nombre in _NOMBRE_TXT.findall(texto):
+            self._agregar("nombres", _norm(nombre))
+        for monto in _QUETZALES.findall(texto):
+            self._agregar("montos", "texto", round(float(monto.replace(",", "")), 2))
+
     def _recorrer(self, valor: Any, padre: dict[str, Any] | None, clave: str | None = None) -> None:
         if isinstance(valor, dict):
             self._fila(valor)
@@ -106,22 +146,26 @@ class Inventario:
                 self._agregar("clientes", c)
             for c in _CUENTA.findall(valor):
                 self._agregar("cuentas", c)
-            if clave in _CLAVES_NOMBRE and valor.strip():
+            if clave in _CLAVES_NOMBRE and valor.strip() and not _CLIENTE.fullmatch(valor.strip()):
                 self._agregar("nombres", _norm(valor))
+            if clave in _CLAVES_CUENTA and padre is not None and any(ch.isdigit() for ch in valor):
+                self._agregar("cuentas", valor.strip())
         elif isinstance(valor, (int, float)) and not isinstance(valor, bool):
-            if clave in _CLAVES_MONTO and padre is not None:
+            if _es_monto(clave) and padre is not None:
                 dueno = padre.get("transaccion_id") or padre.get("id") or padre.get("cuenta_id") or ""
                 self._agregar("montos", dueno, clave, round(float(valor), 2))
 
     def _fila(self, d: dict[str, Any]) -> None:
         """Reconoce filas de las tablas del banco por su forma."""
         ident = d.get("id")
-        if isinstance(ident, str) and _CLIENTE.fullmatch(ident) and d.get("nombre"):
+        codigo = ident if isinstance(ident, str) else d.get("codigo")
+        if isinstance(codigo, str) and _CLIENTE.fullmatch(codigo) and d.get("nombre"):
             self._agregar("nombres", _norm(d["nombre"]))
-        if "fecha_hora" in d and "monto" in d:
-            trx = d.get("transaccion_id") or d.get("id")
-            if trx is not None:
-                self._agregar("movimientos", trx)
+        if "nivel" in d and "motivo" in d and "estado" in d:   # alertas_fraude_abiertas (demo-banco)
+            self._agregar("casos", "alerta", ident if ident is not None else (d.get("fecha"), d.get("motivo")))
+        if ("fecha_hora" in d or ("fecha" in d and "canal" in d and "nivel" not in d)) and "monto" in d:
+            trx = d.get("transaccion_id") or d.get("id") or (d.get("fecha"), d.get("cuenta"), d.get("monto"))
+            self._agregar("movimientos", trx)
         for trx in d.get("transacciones") or []:   # ráfagas de detectar_anomalias
             if isinstance(trx, int):
                 self._agregar("movimientos", trx)

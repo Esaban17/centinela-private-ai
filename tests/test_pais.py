@@ -380,3 +380,21 @@ def test_texto_herramienta_politicas():
             {"role": "tool", "tool_name": "buscar_politicas", "tool_call_id": "c", "content": res}]
     sal = a_openai(msgs, recordatorio=True)
     assert "¿Qué dice la política?" in sal[-1]["content"] and "NR-005" in sal[-2]["content"]
+
+
+def test_sensibles_demo_banco():
+    from orchestrator.soberania.sensibles import Inventario
+    inv = Inventario()
+    inv.herramienta("evaluar_solicitud_credito", {"cliente": "CLI-00119", "monto": 50000},
+                    "DICTAMEN: SUSPENDIDO\nCliente: Andrea Barrios Reyes (CLI-00119), segmento Personal.\n"
+                    "Solicitud: préstamo Personal por Q50,000.00.")
+    inv.herramienta("alertas_fraude_abiertas", {},
+                    "Resultado: 2 fila(s).\n\n| id | fecha | nivel | motivo | estado | cliente | monto | canal |\n"
+                    "|---|---|---|---|---|---|---|---|\n"
+                    "| 7 | 2026-11-01 | Alto | Ráfaga | Abierta | Andrea Barrios Reyes | 4500.00 | Web |\n"
+                    "| 9 | 2026-11-02 | Medio | País | En revisión | Kevin Recinos Reyes | 120.50 | POS |")
+    r = {c["id"]: c["cantidad"] for n in inv.resumen()["niveles"] for c in n["categorias"]}
+    assert r["clientes"] == 1
+    assert r["nombres"] == 2          # el mismo nombre en el dictamen y en la alerta cuenta una vez
+    assert r["casos"] == 2
+    assert r["montos"] >= 3
