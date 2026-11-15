@@ -35,9 +35,31 @@ class PaisNoDisponible(OllamaNoDisponible):
 
 
 RECORDATORIO_HERRAMIENTAS = (
-    "Arriba están los resultados de {nombres}. Respóndale ahora al ejecutivo con esos datos concretos: copie el "
+    "Arriba están los resultados de {nombres}. Responda ahora SOLO esta pregunta del ejecutivo: «{pregunta}». "
+    "Use esos datos concretos: copie el "
     "dictamen, los montos, tasas, motivos y códigos tal como aparecen. No mencione herramientas, funciones ni el "
     "formato de la respuesta. No vuelva a llamar una herramienta que ya respondió.")
+
+
+def texto_herramienta(contenido: Any) -> str:
+    """Resultados de buscar_politicas (JSON con metadatos del motor) → texto con la cita y el fragmento. El 8B
+    entiende mejor «[NR-005, sección 1] …» que un JSON con puntajes, modos y motores."""
+    texto = str(contenido or "")
+    if '"fragmentos"' not in texto:
+        return texto
+    try:
+        datos = json.loads(texto)
+    except (json.JSONDecodeError, TypeError):
+        return texto
+    if not isinstance(datos, dict) or not isinstance(datos.get("fragmentos"), list):
+        return texto
+    if not datos["fragmentos"]:
+        return str(datos.get("mensaje") or "No se encontraron fragmentos de política relacionados.")
+    partes = ["Fragmentos de las políticas del banco (cite documento y sección):"]
+    for f in datos["fragmentos"]:
+        codigo = f"{f.get('codigo')} · " if f.get("codigo") else ""
+        partes.append(f"[{codigo}{f.get('cita') or f.get('documento')}]\n{str(f.get('fragmento') or '').strip()}")
+    return "\n\n".join(partes)
 
 
 def a_openai(mensajes: list[dict[str, Any]], recordatorio: bool = False) -> list[dict[str, Any]]:
@@ -65,7 +87,7 @@ def a_openai(mensajes: list[dict[str, Any]], recordatorio: bool = False) -> list
             tid = m.get("tool_call_id") or (pendientes.pop(0) if pendientes else f"call_{len(salida)}")
             if tid in pendientes:
                 pendientes.remove(tid)
-            salida.append({"role": "tool", "tool_call_id": tid, "content": str(m.get("content") or "")})
+            salida.append({"role": "tool", "tool_call_id": tid, "content": texto_herramienta(m.get("content"))})
         elif m.get("images"):
             partes: list[dict[str, Any]] = [{"type": "text", "text": m.get("content") or ""}]
             partes += [{"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b}"}} for b in m["images"]]
@@ -80,7 +102,9 @@ def a_openai(mensajes: list[dict[str, Any]], recordatorio: bool = False) -> list
             n = str(m.get("tool_name") or "la herramienta")
             if n not in nombres:
                 nombres.insert(0, n)
-        salida.append({"role": "user", "content": RECORDATORIO_HERRAMIENTAS.format(nombres=", ".join(nombres))})
+        pregunta = next((str(m.get("content") or "") for m in reversed(mensajes) if m.get("role") == "user"), "")
+        salida.append({"role": "user", "content": RECORDATORIO_HERRAMIENTAS.format(
+            nombres=", ".join(nombres), pregunta=pregunta.strip()[:300])})
     return salida
 
 

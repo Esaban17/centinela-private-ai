@@ -21,7 +21,7 @@ from orchestrator import prompts
 from orchestrator.ganchos import GanchoNoDisponible, disponible
 from orchestrator.mcp_host import MCPNoDisponible, solicitante_actual
 from orchestrator.ollama import OllamaNoDisponible, RespuestaLLM, observador_actual
-from orchestrator.pais import PaisNoDisponible
+from orchestrator.pais import PaisNoDisponible, texto_herramienta
 
 if TYPE_CHECKING:
     from orchestrator.orquestador import Orquestador, Sesion
@@ -280,13 +280,16 @@ class Agente:
                 turno.locutor.alimentar(texto)
 
         ultimo_resultado = ""
+        tp = oq.get("turnos_previos_llm")
+        turnos_previos = None if tp is None or tp == "" else int(tp)
         respaldo = bool(self.cfg.get("orquestador", {}).get("respaldo_respuesta_meta",
                                                              self.cfg.get("proveedor") == "pais"))
         while turno.iteraciones < max_iter:
             turno.iteraciones += 1
             with turno.etapa("llm"):
                 r: RespuestaLLM = await self._con_tiempo(
-                    self.orq.ollama.chat("agente", sesion.memoria.para_llm(self._sistema()), herramientas=herramientas,
+                    self.orq.ollama.chat("agente", sesion.memoria.para_llm(self._sistema(), turnos_previos),
+                                         herramientas=herramientas,
                                          al_recibir=delta, tarea="Razonar y usar herramientas"), "llm", turno)
             sesion.memoria.agregar(r.mensaje())
             if not r.llamadas:
@@ -294,7 +297,7 @@ class Agente:
                 if respaldo and ultimo_resultado and respuesta_meta(texto):
                     # El 8B describió la herramienta en vez de comunicar el resultado: se muestra el resultado.
                     log.info("turno %s · respuesta meta del modelo; se muestra el resultado de la herramienta", turno.id)
-                    extra = "\n\n" + ultimo_resultado[:1500]
+                    extra = "\n\n" + texto_herramienta(ultimo_resultado)[:1500]
                     await delta(extra)
                     texto += extra
                 return texto

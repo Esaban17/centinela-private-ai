@@ -349,3 +349,34 @@ def test_respuesta_meta():
     assert not respuesta_meta("DICTAMEN: SUSPENDIDO. El cliente tiene una alerta de fraude abierta (NR-005).")
     assert not respuesta_meta("El cliente califica por Q200,000 a 11.50 %.")
     assert not respuesta_meta("")
+
+
+def test_memoria_solo_turno_en_curso():
+    from orchestrator.memoria import Memoria
+    m = Memoria(40)
+    for msg in [{"role": "user", "content": "¿CLI-00142 califica?"},
+                {"role": "assistant", "content": "", "tool_calls": [{"function": {"name": "evaluar"}}]},
+                {"role": "tool", "content": "DICTAMEN: APROBADO"},
+                {"role": "assistant", "content": "DICTAMEN: APROBADO CON CONDICIONES"},
+                {"role": "user", "content": "¿Qué dice la política de fraude?"}]:
+        m.agregar(msg)
+    assert [x["role"] for x in m.para_llm("S", 0)] == ["system", "user"]
+    assert [x["role"] for x in m.para_llm("S", 1)] == ["system", "user", "assistant", "user"]
+    assert [x["role"] for x in m.para_llm("S", 5)] == ["system", "user", "assistant", "user"]
+    assert len(m.para_llm("S")) == 6
+
+
+def test_texto_herramienta_politicas():
+    import json
+    from orchestrator.pais import a_openai, texto_herramienta
+    res = json.dumps({"disponible": True, "modo": "hibrida", "motor_vectorial": "sqlite-vec", "fragmentos": [
+        {"documento": "Normas de riesgo", "codigo": "NR-005", "seccion": "1", "cita": "Normas de riesgo, sección 1",
+         "fragmento": "Con alerta de fraude abierta la solicitud se suspende.", "puntaje": 1.0}]})
+    t = texto_herramienta(res)
+    assert "NR-005" in t and "se suspende" in t and "motor" not in t
+    assert texto_herramienta("DICTAMEN: SUSPENDIDO") == "DICTAMEN: SUSPENDIDO"
+    msgs = [{"role": "user", "content": "¿Qué dice la política?"},
+            {"role": "assistant", "tool_calls": [{"id": "c", "function": {"name": "buscar_politicas", "arguments": {}}}]},
+            {"role": "tool", "tool_name": "buscar_politicas", "tool_call_id": "c", "content": res}]
+    sal = a_openai(msgs, recordatorio=True)
+    assert "¿Qué dice la política?" in sal[-1]["content"] and "NR-005" in sal[-2]["content"]
