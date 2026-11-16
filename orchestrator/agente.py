@@ -200,6 +200,8 @@ class Agente:
                 voz_tarea = asyncio.create_task(self._emitir_locutor(turno, turno.locutor))
 
             sesion.memoria.agregar({"role": "user", "content": contenido_usuario})
+            if sesion.modo != "pais":
+                await self._reconectar_mcp(turno)
             final = await (self._turno_pais(turno) if sesion.modo == "pais" else self._loop(turno))
 
             resumen = None
@@ -266,6 +268,21 @@ class Agente:
 
     # ───────────── loop de herramientas ─────────────
 
+    async def _reconectar_mcp(self, turno: Turno) -> None:
+        """Si un servidor MCP no conectó al arrancar (p. ej. el túnel ssh a demo-banco estaba cerrado), se reintenta
+        al empezar cada turno. Si sigue sin conectar, se avisa: sin sus herramientas el modelo no tiene los datos."""
+        host = self.orq.host
+        if host.conectado:
+            return
+        antes = len(host.herramientas)
+        try:
+            await asyncio.wait_for(host.conectar(), 10)
+        except (MCPNoDisponible, TimeoutError) as e:
+            turno.emitir("aviso", {"etapa": "herramienta", "mensaje": "Un servidor de herramientas no responde, así que "
+                                   f"no tengo todos los datos del banco. {e}"[:400]})
+        if len(host.herramientas) != antes:
+            turno.sesion.bus.emitir("sesion.lista", self.orq.datos_sesion_lista())
+
     async def _loop(self, turno: Turno) -> str:
         sesion = turno.sesion
         oq = self.cfg["orquestador"]
@@ -303,6 +320,21 @@ class Agente:
                                                         "muestra el resultado de la herramienta."})
                     await delta(extra)
                     texto += extra
+                if not texto:
+                    # Respuesta vacía (pasa con el 8B en PAIS): nunca se deja la burbuja en blanco.
+                    if respaldo and ultimo_resultado:
+                        texto = texto_herramienta(ultimo_resultado)[:1500]
+                        turno.emitir("guardia", {"nombre": "respaldo_respuesta", "accion": "corregida",
+                                                 "mensaje": "El modelo no escribió respuesta: se muestra el resultado "
+                                                            "de la herramienta."})
+                        await delta(texto)
+                    elif not self.orq.host.conectado:
+                        raise ErrorTurno("respuesta_vacia", "El modelo no devolvió respuesta y un servidor de "
+                                         "herramientas (MCP) no está conectado: sin él no tengo los datos del banco. "
+                                         "Revise la conexión (en la Mac, el túnel ssh a demo-banco).", "herramienta")
+                    else:
+                        raise ErrorTurno("respuesta_vacia", "El modelo no devolvió ninguna respuesta. Intente de nuevo "
+                                                            "o reformule la pregunta.", "llm")
                 return texto
             for llamada in r.llamadas:
                 resultado = await self._ejecutar_herramienta(turno, llamada.nombre, llamada.argumentos)

@@ -406,3 +406,34 @@ def test_ubicacion_servidores_mcp():
     local = HostMCP(object(), nombre="politicas")
     estado = HostMCPMultiple([remoto, local]).estado()
     assert [(e["nombre"], e["ubicacion"]) for e in estado] == [("demo-banco", "remoto"), ("politicas", "local")]
+
+
+
+async def test_respuesta_vacia_usa_el_resultado_de_la_herramienta(cfg_pais, servidor, db):
+    """El 8B a veces termina sin texto: la burbuja nunca queda en blanco (respaldo con el resultado)."""
+    cfg_pais["orquestador"]["enrutamiento"] = {"clasificar_intencion": False, "resumen_hablado": False}
+    falso = PaisFalso([{"llamadas": [llamada("buscar_cliente", texto="Lucía Cojtí")]}, {"contenido": ""}])
+    host = HostMCP(servidor)
+    orq = Orquestador(cfg_pais, PaisLLM(cfg_pais, transport=falso.transport), host, db=db)
+    await host.conectar()
+    try:
+        eventos = await _turno(orq, "Busque a Lucía Cojtí")
+    finally:
+        await orq.cerrar()
+    final = [e["datos"]["texto"] for e in eventos if e["tipo"] == "respuesta.final"]
+    assert final and "CLI-0042" in final[0]
+    assert any(e["tipo"] == "guardia" for e in eventos)
+
+
+async def test_respuesta_vacia_sin_herramientas_da_error(cfg_pais, servidor, db):
+    cfg_pais["orquestador"]["enrutamiento"] = {"clasificar_intencion": False, "resumen_hablado": False}
+    falso = PaisFalso([{"contenido": ""}])
+    host = HostMCP(servidor)
+    orq = Orquestador(cfg_pais, PaisLLM(cfg_pais, transport=falso.transport), host, db=db)
+    await host.conectar()
+    try:
+        eventos = await _turno(orq, "Hola")
+    finally:
+        await orq.cerrar()
+    errores = [e["datos"]["codigo"] for e in eventos if e["tipo"] == "error"]
+    assert errores == ["respuesta_vacia"] and not any(e["tipo"] == "respuesta.final" for e in eventos)
