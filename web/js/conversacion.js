@@ -129,7 +129,10 @@ export class Conversacion {
         break;
       case 'turno.fin': {
         const t = this.turnos.get(tid);
-        if (t?.burbuja) t.burbuja.classList.remove('escribiendo');
+        if (t?.burbuja) {
+          t.burbuja.classList.remove('escribiendo');
+          if (!t.burbuja.textContent.trim()) { t.burbuja.remove(); t.burbuja = null; }
+        }
         if (t?.citasPend) this._citas(t, t.citasPend);
         if (t && d.cancelado) this.nota('Turno detenido.', 'aviso', tid);
         break;

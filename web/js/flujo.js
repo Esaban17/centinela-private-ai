@@ -47,6 +47,7 @@ export class Flujo {
     const servidores = (d.mcp_servidores && d.mcp_servidores.length) ? d.mcp_servidores
       : [{ nombre: 'banco', ubicacion: 'local', herramientas: (d.herramientas || []).map((h) => h.nombre) }];
     this.servidorDe = {};
+    this.desconectados = servidores.filter((s) => s.conectado === false).map((s) => `mcp:${s.nombre}`);
     const locales = servidores.filter((s) => s.ubicacion !== 'remoto');
     const remotos = servidores.filter((s) => s.ubicacion === 'remoto');
     const yLocal = FILA[2] + H_NODO + 14;
@@ -255,6 +256,11 @@ export class Flujo {
       if (n.svgSub && !n.compacto) n.svgSub.textContent = recortar(n.sub, Math.floor((n.w - 16) / 7.2) + 4);
     }
     if (this.nodos?.orq?.svgPasos) this.nodos.orq.svgPasos.replaceChildren();
+    // Un servidor MCP que no conectó queda en rojo: sin él el modelo no tiene esas herramientas.
+    for (const id of this.desconectados || []) {
+      this._estado(id, 'error');
+      this._metrica(id, 'sin conexión');
+    }
     if (!conTurno && this.lineaTiempo) this.lineaTiempo.replaceChildren(el('p', { class: 'tenue' }, 'Sin turnos todavía.'));
     this._pintarSalida();
   }
