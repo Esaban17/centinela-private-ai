@@ -2,6 +2,7 @@
 import { Conexion, pedir, subirDocumento } from './conexion.js';
 import { Conversacion } from './conversacion.js';
 import { Visor } from './visor.js';
+import { Flujo } from './flujo.js';
 import { Panel } from './panel.js';
 import { SelectorModelos } from './modelos.js';
 import { PushToTalk, Reproductor } from './voz.js';
@@ -23,7 +24,8 @@ const conversacion = new Conversacion($('mensajes'), {
   },
 });
 const visor = new Visor($('visor'), $('historial-visor'));
-const panel = new Panel();
+const flujo = new Flujo($('flujo'));
+const panel = new Panel({ alSondeo: (s) => flujo.actualizarSoberania(s) });
 const selector = new SelectorModelos();
 const reproductor = new Reproductor();
 let enCurso = false;
@@ -61,10 +63,31 @@ function alEvento(ev) {
       break;
   }
   conversacion.evento(ev);
+  flujo.evento(ev);
   visor.evento(ev);
+  if (ev.tipo === 'documento.extraido') mostrarPestana('visor');
+  else if (ev.tipo === 'herramienta.fin' && pestana !== 'visor') $('tab-visor').classList.add('novedad');
   panel.evento(ev);
   if (proveedor !== 'pais') selector.evento(ev);   // en PAIS los modelos no ocupan la RAM de este equipo
 }
+
+// ─── Pestañas de la zona 2: «Flujo» (diagrama en vivo) y «Visor» (documentos, tablas y gráficas) ───
+let pestana = almacenar('centinela.pestana') === 'visor' ? 'visor' : 'flujo';
+function mostrarPestana(p) {
+  pestana = p;
+  for (const [id, cuerpo] of [['flujo', 'flujo'], ['visor', 'visor']]) {
+    const activa = id === p;
+    $(`tab-${id}`).setAttribute('aria-selected', String(activa));
+    $(cuerpo).classList.toggle('oculto', !activa);
+  }
+  $('historial-visor').classList.toggle('oculto', p !== 'visor');
+  document.body.classList.toggle('con-flujo', p === 'flujo');
+  if (p === 'visor') $('tab-visor').classList.remove('novedad');
+  almacenar('centinela.pestana', p === 'visor' ? 'visor' : null);
+}
+$('tab-flujo').addEventListener('click', () => mostrarPestana('flujo'));
+$('tab-visor').addEventListener('click', () => mostrarPestana('visor'));
+mostrarPestana(pestana);
 
 // ─── Modo PAIS: modelos en el datacenter y botón «agente Centinela / agente PAIS» ───
 const btnModo = $('btn-modo');
@@ -235,6 +258,7 @@ $('btn-nueva').addEventListener('click', () => {
   almacenar('centinela.sesion', sesionId);
   conversacion.limpiar();
   visor.limpiar();
+  flujo.limpiar();
   panel.reiniciarSesion();
   marcarEnCurso(false);
   conectar();

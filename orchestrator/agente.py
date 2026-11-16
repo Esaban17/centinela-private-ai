@@ -298,6 +298,9 @@ class Agente:
                     # El 8B describió la herramienta en vez de comunicar el resultado: se muestra el resultado.
                     log.info("turno %s · respuesta meta del modelo; se muestra el resultado de la herramienta", turno.id)
                     extra = "\n\n" + texto_herramienta(ultimo_resultado)[:1500]
+                    turno.emitir("guardia", {"nombre": "respaldo_respuesta", "accion": "corregida",
+                                             "mensaje": "El modelo describió la herramienta sin dar el dato: se "
+                                                        "muestra el resultado de la herramienta."})
                     await delta(extra)
                     texto += extra
                 return texto

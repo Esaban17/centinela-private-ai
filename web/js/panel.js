@@ -7,8 +7,9 @@ import { el, dinero, ms, num, ETAPAS, ROLES } from './util.js';
 const $ = (id) => document.getElementById(id);
 
 export class Panel {
-  constructor({ intervalo = 1500 } = {}) {
+  constructor({ intervalo = 1500, alSondeo = null } = {}) {
     this.intervalo = intervalo;
+    this.alSondeo = alSondeo;   // el diagrama de flujo usa la misma instantánea (guardia de salida)
     this.tokens = { entrada: 0, salida: 0 };
     this.fallos = 0;
     this.modelosPorRol = {};
@@ -33,7 +34,9 @@ export class Panel {
       const r = await fetch(`/api/soberania?tokens_entrada=${this.tokens.entrada}&tokens_salida=${this.tokens.salida}`, { cache: 'no-store' });
       if (!r.ok) throw new Error(r.status);
       this.fallos = 0;
-      this._pintar(await r.json());
+      const datos = await r.json();
+      this._pintar(datos);
+      this.alSondeo?.(datos);
     } catch {
       this.fallos += 1;
       if (this.fallos >= 3) {

@@ -356,3 +356,106 @@ table.campos td:last-child { font-weight: 600; font-size: 1rem; }
 /* Modo PAIS: los modelos corren en el datacenter, no en la RAM de este equipo. */
 body.modo-pais #estado-ram,
 body.modo-pais #aviso-ram { display: none !important; }
+
+/* ───── Zona 2: pestañas «Flujo» / «Visor» ───── */
+.pestanas { display: flex; gap: .3rem; }
+.pestana {
+  background: none; border: 1px solid transparent; border-radius: 999px; padding: .2rem .8rem;
+  font-size: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--tenue);
+}
+.pestana[aria-selected="true"] { color: var(--texto); border-color: var(--borde); background: var(--tarjeta); }
+.pestana.novedad::after { content: ""; display: inline-block; width: .45rem; height: .45rem; margin-left: .35rem;
+  border-radius: 50%; background: var(--acento); vertical-align: middle; }
+
+/* ───── Flujo: diagrama de arquitectura en vivo ───── */
+.flujo-cuerpo { flex: 1; overflow: auto; padding: .7rem .9rem 1rem; }
+.flujo { display: flex; flex-direction: column; gap: .5rem; }
+.flujo-cabeza { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .4rem .8rem; }
+.flujo-resumen { font-size: .82rem; color: var(--texto); }
+.flujo-leyenda { display: flex; gap: .7rem; font-size: .7rem; color: var(--tenue); }
+.ley::before { content: ""; display: inline-block; width: .6rem; height: .6rem; border-radius: 3px; margin-right: .3rem;
+  vertical-align: -1px; border: 2px solid var(--borde); }
+.ley.activo::before { border-color: var(--acento); box-shadow: 0 0 6px var(--acento); }
+.ley.hecho::before { border-color: var(--verde); background: var(--verde-fondo); }
+.ley.espera::before { border-color: var(--ambar); background: var(--ambar-fondo); }
+.ley.error::before { border-color: var(--rojo); background: var(--rojo-fondo); }
+
+.flujo-svg { width: 100%; height: auto; display: block; font-family: var(--fuente); }
+.zona-fondo { fill: #0f161e; stroke: var(--borde); stroke-width: 1; }
+.zona-fondo.remota { fill: #111a24; stroke-dasharray: 2 0; }
+.zona-etq { fill: var(--tenue); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.frontera { stroke: var(--ambar); stroke-width: 1.5; stroke-dasharray: 6 5; opacity: .7; }
+
+.nodo { --c: var(--acento); }
+.nodo.t-modelo { --c: var(--r-agente); }
+.nodo.t-embeddings { --c: var(--r-embeddings); }
+.nodo.t-agente { --c: var(--violeta); }
+.nodo.t-mcp { --c: var(--r-tts); }
+.nodo.t-guardia { --c: var(--ambar); }
+.nodo.t-stt { --c: var(--r-stt); }
+.nodo.t-tts { --c: var(--r-tts); }
+.nodo.t-usuario { --c: var(--texto); }
+.nodo .caja { fill: var(--tarjeta); stroke: var(--borde); stroke-width: 1.5; transition: stroke .25s, fill .25s; }
+.nodo .n-titulo { fill: var(--texto); font-size: 13px; font-weight: 700; }
+.nodo .n-titulo.centro { text-anchor: middle; font-size: 12.5px; }
+.nodo .n-sub { fill: var(--tenue); font-size: 11px; }
+.nodo .n-metrica { fill: var(--c); font-size: 10.5px; font-family: var(--mono); }
+.nodo .n-metrica.der { text-anchor: end; }
+.nodo .n-paso { fill: var(--tenue); font-size: 10.5px; font-family: var(--mono); }
+.nodo .n-paso.t-modelo { fill: var(--r-agente); }
+.nodo .n-paso.t-mcp { fill: var(--r-tts); }
+.nodo .n-paso.t-guardia { fill: var(--ambar); }
+.nodo .n-paso.t-ok { fill: var(--verde); }
+.nodo .n-paso.t-error { fill: var(--rojo); }
+.nodo .n-titulo, .nodo .n-sub { opacity: .75; transition: opacity .25s; }
+.nodo[data-estado] .n-titulo, .nodo[data-estado] .n-sub { opacity: 1; }
+.nodo.t-orq .n-titulo, .nodo.t-orq .n-sub { opacity: 1; }
+.nodo[data-estado="activo"] .caja { stroke: var(--c); fill: #1a2a3a; animation: latido 1.1s ease-in-out infinite; }
+.nodo[data-estado="hecho"] .caja { stroke: var(--verde); fill: #13261c; }
+.nodo[data-estado="espera"] .caja { stroke: var(--ambar); fill: var(--ambar-fondo); }
+.nodo[data-estado="error"] .caja { stroke: var(--rojo); fill: var(--rojo-fondo); }
+@keyframes latido {
+  0%, 100% { filter: drop-shadow(0 0 2px var(--c)); stroke-width: 1.5; }
+  50% { filter: drop-shadow(0 0 9px var(--c)); stroke-width: 2.5; }
+}
+
+.arista { fill: none; stroke: var(--borde); stroke-width: 1.6; transition: stroke .25s; }
+.arista.interna { stroke-dasharray: 3 4; opacity: .7; }
+.arista[data-estado="fluye"] { stroke: var(--acento); stroke-width: 2.4; stroke-dasharray: 7 6; animation: fluye .6s linear infinite; }
+.arista[data-estado="usada"] { stroke: #2f6b4a; stroke-width: 2; }
+.flecha { fill: var(--borde); }
+@keyframes fluye { to { stroke-dashoffset: -13; } }
+@media (prefers-reduced-motion: reduce) {
+  .nodo[data-estado="activo"] .caja, .arista[data-estado="fluye"] { animation: none; }
+}
+
+/* Línea de tiempo del turno: carriles por nodo; lo que se superpone corrió en paralelo. */
+.lt-titulo { margin: .4rem 0 0; font-size: .72rem; color: var(--tenue); text-transform: uppercase; letter-spacing: .06em; }
+.linea-tiempo { display: flex; flex-direction: column; gap: .25rem; font-size: .7rem; }
+.lt-fila { display: grid; grid-template-columns: 9.5rem 1fr; align-items: center; gap: .5rem; }
+.lt-carril { color: var(--tenue); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lt-pista { position: relative; height: 1.15rem; background: #0f161e; border-radius: 5px; }
+.lt-barra {
+  position: absolute; top: 2px; bottom: 2px; border-radius: 4px; background: var(--c, var(--acento));
+  color: #08111a; font-weight: 700; font-size: .62rem; line-height: 1rem; padding: 0 .3rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .9;
+}
+.lt-barra.viva { animation: viva 1s ease-in-out infinite; }
+@keyframes viva { 50% { opacity: .55; } }
+.lt-barra.t-orq { --c: #2c4a66; color: var(--texto); }
+.lt-barra.t-modelo { --c: var(--r-agente); }
+.lt-barra.t-agente { --c: var(--violeta); }
+.lt-barra.t-embeddings { --c: var(--r-embeddings); }
+.lt-barra.t-mcp { --c: var(--r-tts); }
+.lt-barra.t-guardia { --c: var(--ambar); }
+.lt-barra.t-stt { --c: var(--r-stt); }
+.lt-barra.t-tts { --c: #5fe0d6; }
+.lt-barra.t-usuario { --c: #cfd8e3; }
+.lt-eje .lt-pista { background: none; height: .9rem; }
+.lt-marca { position: absolute; transform: translateX(-50%); color: var(--tenue); font-family: var(--mono); font-size: .62rem; white-space: nowrap; }
+.lt-marca:first-child { transform: none; }
+.lt-marca:last-child { transform: translateX(-100%); }
+
+/* Con la pestaña «Flujo» abierta, el diagrama gana ancho para leerse desde el fondo del salón. */
+body.con-flujo .zonas { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(20rem, .8fr); }
+@media (max-width: 1200px) { body.con-flujo .zonas { grid-template-columns: 1fr; } }

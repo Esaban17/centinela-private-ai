@@ -66,10 +66,17 @@
     <!-- 2. Visor -->
     <section class="zona visor" aria-label="Visor">
       <div class="zona-titulo">
-        <h2>Visor</h2>
-        <div class="historial-visor" id="historial-visor"></div>
+        <div class="pestanas" role="tablist">
+          <button type="button" role="tab" class="pestana" id="tab-flujo" aria-selected="true" aria-controls="flujo">Flujo</button>
+          <button type="button" role="tab" class="pestana" id="tab-visor" aria-selected="false" aria-controls="visor">Visor</button>
+        </div>
+        <div class="historial-visor oculto" id="historial-visor"></div>
       </div>
-      <div class="visor-cuerpo" id="visor">
+      <!-- Diagrama de arquitectura en vivo: qué modelos, herramientas y guardias trabajan en cada turno. -->
+      <div class="flujo-cuerpo" id="flujo" role="tabpanel" aria-labelledby="tab-flujo">
+        <div class="vacio"><p>Conectando con el orquestador…</p></div>
+      </div>
+      <div class="visor-cuerpo oculto" id="visor" role="tabpanel" aria-labelledby="tab-visor">
         <div class="vacio">
           <p>Aquí aparecen los documentos analizados, las tablas y las gráficas de cada consulta.</p>
         </div>

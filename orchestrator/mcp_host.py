@@ -133,6 +133,15 @@ class HostMCP:
     def conectado(self) -> bool:
         return self.cliente is not None
 
+    @property
+    def ubicacion(self) -> str:
+        """«remoto» si el servidor está en otra máquina (Streamable HTTP); «local» si es un proceso hijo o en memoria."""
+        return "remoto" if isinstance(self.objetivo, ServidorHTTP) else "local"
+
+    def estado(self) -> list[dict[str, Any]]:
+        return [{"nombre": self.nombre or "banco-atitlan", "conectado": self.conectado, "ubicacion": self.ubicacion,
+                 "herramientas": list(self.herramientas)}]
+
     async def conectar(self) -> None:
         if self.cliente is not None:
             return
@@ -256,8 +265,8 @@ class HostMCPMultiple:
         return todas
 
     def estado(self) -> list[dict[str, Any]]:
-        return [{"nombre": h.nombre, "conectado": h.conectado, "herramientas": list(h.herramientas)}
-                for h in self.hosts]
+        return [{"nombre": h.nombre, "conectado": h.conectado, "ubicacion": h.ubicacion,
+                 "herramientas": list(h.herramientas)} for h in self.hosts]
 
     async def conectar(self) -> None:
         errores = []

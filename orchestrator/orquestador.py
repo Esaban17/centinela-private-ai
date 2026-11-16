@@ -171,7 +171,19 @@ class Orquestador:
                 "voz_disponible": disponible(self.ganchos.transcriptor) and disponible(self.ganchos.sintetizador),
                 "vision_disponible": disponible(self.ganchos.vision), "version_contrato": VERSION_CONTRATO,
                 "proveedor": self.proveedor, "modos": self.modos, "modo_inicial": self.modo_inicial,
-                "agente_pais": self.agente_pais.nombre if self.agente_pais is not None else None}
+                "agente_pais": self.agente_pais.nombre if self.agente_pais is not None else None,
+                "mcp_servidores": self._mcp_servidores()}
+
+    def _mcp_servidores(self) -> list[dict[str, Any]]:
+        """Para el diagrama de arquitectura de la UI: cada servidor MCP, dónde corre y sus herramientas."""
+        estado = getattr(self.host, "estado", None)
+        if not callable(estado):
+            return [{"nombre": "banco-atitlan", "conectado": self.host.conectado, "ubicacion": "local",
+                     "herramientas": list(self.host.herramientas)}]
+        try:
+            return estado()
+        except Exception:  # noqa: BLE001 (un doble de pruebas sin estado no debe tumbar la sesión)
+            return []
 
     def iniciar_turno(self, sesion: Sesion, texto: str, entrada: str = "texto", documento_id: str | None = None,
                       audio: tuple[bytes, str] | None = None) -> str:

@@ -78,3 +78,22 @@ por palabras clave con latencias y tokens inventados. No hay STT ni TTS: al solt
 - Permiso de micrófono en Safari/Chrome la primera vez (pedirlo antes de subir al escenario).
 - Que el monitor vea Ollama: si Ollama corre como otro usuario (p. ej. servicio del sistema), macOS niega
   sus conexiones y el panel lo muestra como «sin permiso».
+
+
+## Pestaña «Flujo»: diagrama de arquitectura en vivo
+
+La zona 2 tiene dos pestañas: **Flujo** (por defecto) y **Visor** (documentos, tablas y gráficas; se abre sola al
+leer un documento y muestra un punto azul cuando hay contenido nuevo).
+
+`web/js/flujo.js` dibuja, a partir de `sesion.lista`, la arquitectura del despliegue:
+
+- **Este equipo**: ejecutivo, voz → texto, orquestador, respuesta, texto → voz, los servidores MCP locales y las
+  guardias (aprobación humana, verificación de la respuesta, auditoría).
+- **Guardia de salida** en la frontera, con las conexiones fuera del datacenter (de `/api/soberania`).
+- **Datacenter · PAIS** (u **Ollama · este equipo**): un nodo por modelo (agrupando roles), el agente de PAIS y los
+  servidores MCP remotos.
+
+Con los eventos del turno se encienden los nodos que trabajan (azul que late), las aristas por donde viaja la
+consulta y, al terminar, quedan en verde los que respondieron, con su tiempo y tokens. Debajo, la **línea de
+tiempo** tiene un carril por nodo: las barras que se superponen corrieron en paralelo (p. ej. MCP políticas y los
+embeddings, o la voz mientras el modelo escribe).
